@@ -24,10 +24,10 @@ class RegisterUserpage extends StatefulWidget {
 }
 
 class _RegisterUserpageState extends State<RegisterUserpage> {
-  String apiKey = "";
+  String apiKey = "", sameAddress = "";
   final _controller = Completer<GoogleMapController>();
   MapPickerController mapPickerController = MapPickerController();
-  late CameraPosition initPosition;
+  late CameraPosition initPosition = const CameraPosition(target: LatLng(0, 0));
   late LatLng latlng;
   var place = const LatLng(0, 0);
   Set<Marker> markers = {};
@@ -314,7 +314,25 @@ class _RegisterUserpageState extends State<RegisterUserpage> {
 
   void addProfileImage() {} // Store the previous selected location
 
-  void showMapPicker() {
+  Future<void> showMapPicker() async {
+    if (addressCtl.text.isNotEmpty && addressCtl.text != sameAddress) {
+      final String url =
+          'https://maps.googleapis.com/maps/api/place/textsearch/json?query=${addressCtl.text}&language=th&key=${apiKey}';
+      final response = await http.get(Uri.parse(url));
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+
+        if (data['status'] == 'OK') {
+          double latitude = data['results'][0]['geometry']['location']['lat'];
+          double longitude = data['results'][0]['geometry']['location']['lng'];
+
+          initPosition =
+              CameraPosition(target: LatLng(latitude, longitude), zoom: 17);
+          log('Latitude: $latitude, Longitude: $longitude');
+        }
+      }
+      setState(() {});
+    }
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -332,6 +350,11 @@ class _RegisterUserpageState extends State<RegisterUserpage> {
                   ),
                   mapPickerController: mapPickerController,
                   child: GoogleMap(
+                    myLocationButtonEnabled: true,
+                    myLocationEnabled: true,
+                    key: UniqueKey(),
+                    trafficEnabled: true,
+                    mapType: MapType.hybrid,
                     initialCameraPosition: initPosition,
                     markers: markers, // Pass markers to the GoogleMap
                     onMapCreated: (GoogleMapController controller) {
@@ -362,25 +385,36 @@ class _RegisterUserpageState extends State<RegisterUserpage> {
                       );
                       if (placemarks.isNotEmpty) {
                         final String url =
-                            'https://maps.googleapis.com/maps/api/geocode/json?latlng=${initPosition.target.latitude},${initPosition.target.longitude}&language=th&key=$apiKey';
+                            'https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${initPosition.target.latitude},${initPosition.target.longitude}&radius=50&language=th&type=point_of_interest&key=${apiKey}';
                         final response = await http.get(Uri.parse(url));
                         if (response.statusCode == 200) {
-                          final data = jsonDecode(response.body);
-
-                          if (data['status'] == 'OK') {
-                            String formattedAddress =
-                                data['results'][0]['formatted_address'];
-                            List<dynamic> addressComponents =
-                                data['results'][0]['address_components'];
-                            addressCtl.text = formattedAddress;
-                            log('Formatted Address: $formattedAddress');
-                            List<String> components =
-                                formattedAddress.trim().split(' ');
-                            // ignore: non_constant_identifier_names
-                            List<String> Fixcomponents =
-                                components.sublist(1, components.length - 1);
-                            addressCtl.text = Fixcomponents.join(' ');
-                            log(addressCtl.text);
+                          final Map<String, dynamic> data =
+                              jsonDecode(response.body);
+                          if (data['status'] == 'OK' &&
+                              data['results'].isNotEmpty) {
+                            final place = data['results'][0];
+                            final String name = place['name'];
+                            final String url =
+                                'https://maps.googleapis.com/maps/api/geocode/json?latlng=${initPosition.target.latitude},${initPosition.target.longitude}&key=$apiKey&language=th';
+                            final response = await http.get(Uri.parse(url));
+                            if (response.statusCode == 200) {
+                              final Map<String, dynamic> data =
+                                  jsonDecode(response.body);
+                              if (data['status'] == 'OK' &&
+                                  data['results'].isNotEmpty) {
+                                final place = data['results'][0];
+                                final String formattedAddress =
+                                    place['formatted_address'];
+                                log('Name: $name, Formatted Address: $formattedAddress');
+                                List<String> components =
+                                    formattedAddress.trim().split(' ');
+                                List<String> fixComponents = components.sublist(
+                                    0, components.length - 1);
+                                addressCtl.text =
+                                    name + fixComponents.join(' ');
+                                log(addressCtl.text);
+                              }
+                            }
                           }
                         }
                       }
@@ -438,6 +472,7 @@ class _RegisterUserpageState extends State<RegisterUserpage> {
     initPosition = CameraPosition(
         target: LatLng(position.latitude, position.longitude), zoom: 17);
     latlng = LatLng(position.latitude, position.longitude);
+    setState(() {});
   }
 
   // void showLocationPicker() {
