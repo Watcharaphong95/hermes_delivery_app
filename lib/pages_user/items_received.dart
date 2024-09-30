@@ -10,6 +10,7 @@ class ItemsReceivedpage extends StatefulWidget {
 }
 
 class _ListpageState extends State<ItemsReceivedpage> {
+  String status = 'ไรเดอร์นำส่งสินค้าแล้ว';
   // ข้อมูลจำลองสำหรับการแสดงผล Card
   final List<Map<String, String>> data = [
     {
@@ -159,12 +160,30 @@ class _ListpageState extends State<ItemsReceivedpage> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                const Text(
-                                  "ไรเดอร์รับงาน",
+                                Text(
+                                  status,
                                   style: TextStyle(
                                     fontSize: 14,
                                     fontWeight: FontWeight.bold,
-                                    color: Color(0xFFF3A72B),
+                                    color: status == "ไรเดอร์รับงาน"
+                                        ? const Color(
+                                            0xFFF3A72B) // Orange - Active work
+                                        : status == "รอไรเดอร์มารับสินค้า"
+                                            ? const Color(
+                                                0xFFFFC107) // Amber - Waiting
+                                            : status ==
+                                                    "ไรเดอร์รับสินค้าแล้วและกำลังเดินทาง"
+                                                ? const Color(
+                                                    0xFF2196F3) // Blue - In transit
+                                                : status ==
+                                                        "ไรเดอร์นำส่งสินค้าแล้ว"
+                                                    ? const Color(
+                                                        0xFF4CAF50) // Green - Delivery complete
+                                                    : status == "ยกเลิก"
+                                                        ? const Color(
+                                                            0xFFFF5722) // Red - Cancelled
+                                                        : const Color(
+                                                            0xFF000000), // Default color
                                   ),
                                 ),
                                 Padding(

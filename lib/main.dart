@@ -1,9 +1,15 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:hermes_app/pages_user/login.dart';
 
 void main() {
-  runApp(const MyApp());
+  if (Platform.isAndroid) {
+    AndroidGoogleMapsFlutter.useAndroidViewSurface = true;
+  }
+  return runApp(MyApp());
 }
 
 class MyApp extends StatelessWidget {
