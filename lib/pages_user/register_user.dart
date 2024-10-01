@@ -26,6 +26,7 @@ class RegisterUserpage extends StatefulWidget {
 
 class _RegisterUserpageState extends State<RegisterUserpage> {
   final box = GetStorage();
+
   String apiKey = "", sameAddress = "";
   final _controller = Completer<GoogleMapController>();
   MapPickerController mapPickerController = MapPickerController();
@@ -43,19 +44,34 @@ class _RegisterUserpageState extends State<RegisterUserpage> {
   TextEditingController confirmpasswordCtl = TextEditingController();
   TextEditingController addressCtl = TextEditingController();
 
+  bool isButtonEnabled = false; // Track button state
+
   @override
   initState() {
-    initPosition = CameraPosition(
-        target: LatLng(double.parse(box.read('curLat').toString()),
-            double.parse(box.read('curLng').toString())),
-        zoom: 17);
+    getCurrentPositionFromStart();
     getCurrentPosition();
     super.initState();
+    getConfig();
+    addressCtl.addListener(() {
+      setState(() {
+        isButtonEnabled = addressCtl.text.isNotEmpty;
+      });
+    });
+  }
+
+  void getConfig() {
     Configuration.getConfig().then((config) {
       setState(() {
         apiKey = config['apiKey'];
       });
     });
+  }
+
+  void getCurrentPositionFromStart() {
+    initPosition = CameraPosition(
+        target: LatLng(double.parse(box.read('curLat').toString()),
+            double.parse(box.read('curLng').toString())),
+        zoom: 17);
   }
 
   @override
@@ -257,7 +273,11 @@ class _RegisterUserpageState extends State<RegisterUserpage> {
                             child: IconButton(
                               icon: const Icon(Icons.search),
                               color: Colors.white,
-                              onPressed: placeSearch, // No function on press
+                              onPressed: isButtonEnabled
+                                  ? () {
+                                      placeSearch;
+                                    }
+                                  : null,
                             ),
                           ),
                         ),
