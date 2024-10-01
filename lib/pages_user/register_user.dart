@@ -7,6 +7,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:get/get.dart';
+import 'package:get_storage/get_storage.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:google_maps_place_picker_mb/google_maps_place_picker.dart';
 import 'package:google_maps_widget/google_maps_widget.dart';
@@ -24,14 +25,15 @@ class RegisterUserpage extends StatefulWidget {
 }
 
 class _RegisterUserpageState extends State<RegisterUserpage> {
+  final box = GetStorage();
   String apiKey = "", sameAddress = "";
   final _controller = Completer<GoogleMapController>();
   MapPickerController mapPickerController = MapPickerController();
-  late CameraPosition initPosition = const CameraPosition(target: LatLng(0, 0));
-  late LatLng latlng;
+  late CameraPosition initPosition;
   var place = const LatLng(0, 0);
   Set<Marker> markers = {};
   LatLng? currentLocation;
+  late List<Placemark> placemarks;
 
   double screenWidth = 0, screenHeight = 0;
 
@@ -43,6 +45,10 @@ class _RegisterUserpageState extends State<RegisterUserpage> {
 
   @override
   initState() {
+    initPosition = CameraPosition(
+        target: LatLng(double.parse(box.read('curLat').toString()),
+            double.parse(box.read('curLng').toString())),
+        zoom: 17);
     getCurrentPosition();
     super.initState();
     Configuration.getConfig().then((config) {
@@ -225,18 +231,37 @@ class _RegisterUserpageState extends State<RegisterUserpage> {
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(30),
                       ),
-                      child: TextField(
-                        maxLines: null,
-                        controller: addressCtl,
-                        decoration: const InputDecoration(
-                          hintText: 'ที่อยู่',
-                          hintStyle: TextStyle(
-                              fontSize: 14, color: Color.fromARGB(97, 0, 0, 0)),
-                          border: InputBorder.none,
-                          contentPadding: EdgeInsets.symmetric(
-                              vertical: 15, horizontal: 35),
+                      child: Stack(children: [
+                        TextField(
+                          maxLines: null,
+                          controller: addressCtl,
+                          decoration: const InputDecoration(
+                            hintText: 'ที่อยู่',
+                            hintStyle: TextStyle(
+                                fontSize: 14,
+                                color: Color.fromARGB(97, 0, 0, 0)),
+                            border: InputBorder.none,
+                            contentPadding: EdgeInsets.symmetric(
+                                vertical: 15, horizontal: 35),
+                          ),
                         ),
-                      ),
+                        Positioned(
+                          top: 50,
+                          right: 10,
+                          child: Container(
+                            height: 50, // Set this to match your desired height
+                            width: 50, // Set a fixed width for the button
+                            decoration: BoxDecoration(
+                                color: const Color(0xFFFF7723),
+                                borderRadius: BorderRadius.circular(20)),
+                            child: IconButton(
+                              icon: const Icon(Icons.search),
+                              color: Colors.white,
+                              onPressed: placeSearch, // No function on press
+                            ),
+                          ),
+                        ),
+                      ]),
                     ),
                   ),
                   const SizedBox(height: 30),
@@ -314,8 +339,8 @@ class _RegisterUserpageState extends State<RegisterUserpage> {
 
   void addProfileImage() {} // Store the previous selected location
 
-  Future<void> showMapPicker() async {
-    if (addressCtl.text.isNotEmpty && addressCtl.text != sameAddress) {
+  Future<void> placeSearch() async {
+    if (addressCtl.text.length > 1) {
       final String url =
           'https://maps.googleapis.com/maps/api/place/textsearch/json?query=${addressCtl.text}&language=th&key=${apiKey}';
       final response = await http.get(Uri.parse(url));
@@ -328,11 +353,17 @@ class _RegisterUserpageState extends State<RegisterUserpage> {
 
           initPosition =
               CameraPosition(target: LatLng(latitude, longitude), zoom: 17);
-          log('Latitude: $latitude, Longitude: $longitude');
         }
       }
-      setState(() {});
+      setState(() {
+        showMapPicker();
+      });
+    } else {
+      log('no addressCtl');
     }
+  }
+
+  Future<void> showMapPicker() async {
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -373,51 +404,17 @@ class _RegisterUserpageState extends State<RegisterUserpage> {
                       }
                     },
                     onCameraMove: (cameraPosition) {
-                      this.initPosition = cameraPosition;
+                      setState(() {
+                        this.initPosition = cameraPosition;
+                      });
                     },
                     onCameraIdle: () async {
                       mapPickerController.mapFinishedMoving!();
                       // ignore: unused_local_variable
-                      List<Placemark> placemarks =
-                          await placemarkFromCoordinates(
+                      placemarks = await placemarkFromCoordinates(
                         initPosition.target.latitude,
                         initPosition.target.longitude,
                       );
-                      if (placemarks.isNotEmpty) {
-                        final String url =
-                            'https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${initPosition.target.latitude},${initPosition.target.longitude}&radius=50&language=th&type=point_of_interest&key=${apiKey}';
-                        final response = await http.get(Uri.parse(url));
-                        if (response.statusCode == 200) {
-                          final Map<String, dynamic> data =
-                              jsonDecode(response.body);
-                          if (data['status'] == 'OK' &&
-                              data['results'].isNotEmpty) {
-                            final place = data['results'][0];
-                            final String name = place['name'];
-                            final String url =
-                                'https://maps.googleapis.com/maps/api/geocode/json?latlng=${initPosition.target.latitude},${initPosition.target.longitude}&key=$apiKey&language=th';
-                            final response = await http.get(Uri.parse(url));
-                            if (response.statusCode == 200) {
-                              final Map<String, dynamic> data =
-                                  jsonDecode(response.body);
-                              if (data['status'] == 'OK' &&
-                                  data['results'].isNotEmpty) {
-                                final place = data['results'][0];
-                                final String formattedAddress =
-                                    place['formatted_address'];
-                                log('Name: $name, Formatted Address: $formattedAddress');
-                                List<String> components =
-                                    formattedAddress.trim().split(' ');
-                                List<String> fixComponents = components.sublist(
-                                    0, components.length - 1);
-                                addressCtl.text =
-                                    name + fixComponents.join(' ');
-                                log(addressCtl.text);
-                              }
-                            }
-                          }
-                        }
-                      }
                     },
                   ),
                 ),
@@ -429,11 +426,66 @@ class _RegisterUserpageState extends State<RegisterUserpage> {
                 child: FilledButton(
                   style: FilledButton.styleFrom(
                       backgroundColor: const Color(0xFFFF7723)),
-                  onPressed: () {
+                  onPressed: () async {
+                    if (placemarks.isNotEmpty) {
+                      final String url =
+                          'https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${initPosition.target.latitude},${initPosition.target.longitude}&radius=40&language=th&type=point_of_interest&key=${apiKey}';
+                      final response = await http.get(Uri.parse(url));
+                      if (response.statusCode == 200) {
+                        final Map<String, dynamic> data =
+                            jsonDecode(response.body);
+                        if (data['status'] == 'OK' &&
+                            data['results'].isNotEmpty) {
+                          final place = data['results'][0];
+                          final String name = place['name'];
+                          final String url =
+                              'https://maps.googleapis.com/maps/api/geocode/json?latlng=${initPosition.target.latitude},${initPosition.target.longitude}&key=$apiKey&language=th';
+                          final response = await http.get(Uri.parse(url));
+                          if (response.statusCode == 200) {
+                            final Map<String, dynamic> data =
+                                jsonDecode(response.body);
+                            if (data['status'] == 'OK' &&
+                                data['results'].isNotEmpty) {
+                              final place = data['results'][0];
+                              final String formattedAddress =
+                                  place['formatted_address'];
+                              log('Name: $name, Formatted Address: $formattedAddress');
+                              List<String> components =
+                                  formattedAddress.trim().split(' ');
+                              List<String> fixComponents =
+                                  components.sublist(0, components.length - 1);
+                              addressCtl.text = name + fixComponents.join(' ');
+                              log(addressCtl.text);
+                            }
+                          }
+                        } else {
+                          final String url =
+                              'https://maps.googleapis.com/maps/api/geocode/json?latlng=${initPosition.target.latitude},${initPosition.target.longitude}&key=$apiKey&language=th';
+                          final response = await http.get(Uri.parse(url));
+                          if (response.statusCode == 200) {
+                            final Map<String, dynamic> data =
+                                jsonDecode(response.body);
+                            if (data['status'] == 'OK' &&
+                                data['results'].isNotEmpty) {
+                              final place = data['results'][0];
+                              final String formattedAddress =
+                                  place['formatted_address'];
+                              log('Formatted Address: $formattedAddress');
+                              List<String> components =
+                                  formattedAddress.trim().split(' ');
+                              List<String> fixComponents =
+                                  components.sublist(0, components.length - 1);
+                              addressCtl.text = fixComponents.join(' ');
+                              log(addressCtl.text);
+                            }
+                          }
+                          log('No point of interest found!');
+                        }
+                      }
+                    }
                     log('lat: ${initPosition.target.latitude} lng: ${initPosition.target.longitude}');
                     currentLocation = LatLng(initPosition.target.latitude,
                         initPosition.target.longitude);
-
                     // Clear existing markers and add the new one
                     markers.clear(); // Clear the markers set
                     markers.add(
@@ -471,7 +523,6 @@ class _RegisterUserpageState extends State<RegisterUserpage> {
         desiredAccuracy: LocationAccuracy.high);
     initPosition = CameraPosition(
         target: LatLng(position.latitude, position.longitude), zoom: 17);
-    latlng = LatLng(position.latitude, position.longitude);
     setState(() {});
   }
 
