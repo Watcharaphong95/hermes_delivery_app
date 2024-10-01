@@ -2,14 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:hermes_app/pages_user/status.dart';
 
-class ItemsReceivedpage extends StatefulWidget {
-  const ItemsReceivedpage({super.key});
+class ItemsList extends StatefulWidget {
+  const ItemsList({super.key});
 
   @override
-  State<ItemsReceivedpage> createState() => _ListpageState();
+  State<ItemsList> createState() => _ListpageState();
 }
 
-class _ListpageState extends State<ItemsReceivedpage> {
+class _ListpageState extends State<ItemsList> {
   String status = 'ไรเดอร์นำส่งสินค้าแล้ว';
   bool isReceived =
       true; // Track the active button (true for received, false for delivery)

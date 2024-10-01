@@ -44,19 +44,12 @@ class _RegisterUserpageState extends State<RegisterUserpage> {
   TextEditingController confirmpasswordCtl = TextEditingController();
   TextEditingController addressCtl = TextEditingController();
 
-  bool isButtonEnabled = false; // Track button state
-
   @override
   initState() {
     getCurrentPositionFromStart();
     getCurrentPosition();
     super.initState();
     getConfig();
-    addressCtl.addListener(() {
-      setState(() {
-        isButtonEnabled = addressCtl.text.isNotEmpty;
-      });
-    });
   }
 
   void getConfig() {
@@ -248,22 +241,25 @@ class _RegisterUserpageState extends State<RegisterUserpage> {
                         borderRadius: BorderRadius.circular(30),
                       ),
                       child: Stack(children: [
-                        TextField(
-                          maxLines: null,
-                          controller: addressCtl,
-                          decoration: const InputDecoration(
-                            hintText: 'ที่อยู่',
-                            hintStyle: TextStyle(
-                                fontSize: 14,
-                                color: Color.fromARGB(97, 0, 0, 0)),
-                            border: InputBorder.none,
-                            contentPadding: EdgeInsets.symmetric(
-                                vertical: 15, horizontal: 35),
+                        SizedBox(
+                          width: 275,
+                          child: TextField(
+                            maxLines: null,
+                            controller: addressCtl,
+                            decoration: const InputDecoration(
+                              hintText: 'ที่อยู่',
+                              hintStyle: TextStyle(
+                                  fontSize: 14,
+                                  color: Color.fromARGB(97, 0, 0, 0)),
+                              border: InputBorder.none,
+                              contentPadding: EdgeInsets.symmetric(
+                                  vertical: 15, horizontal: 35),
+                            ),
                           ),
                         ),
                         Positioned(
-                          top: 50,
-                          right: 10,
+                          top: 5,
+                          right: 5,
                           child: Container(
                             height: 50, // Set this to match your desired height
                             width: 50, // Set a fixed width for the button
@@ -273,9 +269,9 @@ class _RegisterUserpageState extends State<RegisterUserpage> {
                             child: IconButton(
                               icon: const Icon(Icons.search),
                               color: Colors.white,
-                              onPressed: isButtonEnabled
+                              onPressed: addressCtl.text.isNotEmpty
                                   ? () {
-                                      placeSearch;
+                                      placeSearch();
                                     }
                                   : null,
                             ),
@@ -360,6 +356,7 @@ class _RegisterUserpageState extends State<RegisterUserpage> {
   void addProfileImage() {} // Store the previous selected location
 
   Future<void> placeSearch() async {
+    log('test');
     if (addressCtl.text.length > 1) {
       final String url =
           'https://maps.googleapis.com/maps/api/place/textsearch/json?query=${addressCtl.text}&language=th&key=${apiKey}';
@@ -375,9 +372,8 @@ class _RegisterUserpageState extends State<RegisterUserpage> {
               CameraPosition(target: LatLng(latitude, longitude), zoom: 17);
         }
       }
-      setState(() {
-        showMapPicker();
-      });
+      showMapPicker();
+      setState(() {});
     } else {
       log('no addressCtl');
     }

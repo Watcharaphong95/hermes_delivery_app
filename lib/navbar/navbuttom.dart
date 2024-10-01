@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:hermes_app/pages_user/home.dart';
-import 'package:hermes_app/pages_user/items_received.dart';
+import 'package:hermes_app/pages_user/items_list.dart';
 import 'package:hermes_app/pages_user/profile.dart';
+import 'package:hermes_app/pages_user/send_item.dart';
 
 class Navbuttompage extends StatefulWidget {
   int selectedPage = 0;
@@ -21,8 +22,8 @@ class _NavbuttompageState extends State<Navbuttompage> {
   void initState() {
     pageOptions = [
       const Homepage(),
-      const ItemsReceivedpage(),
-      const Homepage(),
+      const ItemsList(),
+      const SendItem(),
       const Profilepage(),
     ];
     // loadData = _initializeStorage();
@@ -94,7 +95,7 @@ class _NavbuttompageState extends State<Navbuttompage> {
               fit: BoxFit.cover,
               color: const Color(0xFFFF7723),
             ),
-            label: 'สั่งของ',
+            label: 'ส่งของ',
           ),
           BottomNavigationBarItem(
             icon: SvgPicture.string(
