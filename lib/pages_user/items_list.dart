@@ -2,16 +2,20 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:hermes_app/pages_user/status.dart';
 
-class ItemsReceivedpage extends StatefulWidget {
-  const ItemsReceivedpage({super.key});
+class ItemsList extends StatefulWidget {
+  const ItemsList({super.key});
 
   @override
-  State<ItemsReceivedpage> createState() => _ListpageState();
+  State<ItemsList> createState() => _ListpageState();
 }
 
-class _ListpageState extends State<ItemsReceivedpage> {
-  // ข้อมูลจำลองสำหรับการแสดงผล Card
-  final List<Map<String, String>> data = [
+class _ListpageState extends State<ItemsList> {
+  String status = 'ไรเดอร์นำส่งสินค้าแล้ว';
+  bool isReceived =
+      true; // Track the active button (true for received, false for delivery)
+
+  // Sample data for cards
+  final List<Map<String, String>> receivedData = [
     {
       "สินค้า": "หนังสือ 'การเดินทางแห่งความฝัน'",
       "ผู้ส่ง": "คุณสมชาย",
@@ -32,9 +36,24 @@ class _ListpageState extends State<ItemsReceivedpage> {
     },
   ];
 
+  final List<Map<String, String>> deliveryData = [
+    {
+      "สินค้า": "นาฬิกา 'แบรนด์ Y'",
+      "ผู้ส่ง": "คุณสมชาย",
+      "ผู้รับ": "คุณสมบัติ",
+      "เวลา": "18 ก.ย 2024 12.00"
+    },
+    {
+      "สินค้า": "ลำโพงบลูทูธ",
+      "ผู้ส่ง": "คุณสมชาย",
+      "ผู้รับ": "คุณสมศักดิ์",
+      "เวลา": "19 ก.ย 2024 13.15"
+    },
+  ];
+
   @override
   Widget build(BuildContext context) {
-    // ขนาดของหน้าจอ
+    // Get screen size
     double screenWidth = MediaQuery.of(context).size.width;
     double screenHeight = MediaQuery.of(context).size.height;
 
@@ -42,14 +61,15 @@ class _ListpageState extends State<ItemsReceivedpage> {
       body: SingleChildScrollView(
         child: Column(
           children: [
+            // Top container with back button and title
             Container(
               width: screenWidth,
               height: screenHeight * 0.2,
               decoration: const BoxDecoration(
                 color: Color(0xFF2C262A),
                 borderRadius: BorderRadius.only(
-                  bottomLeft: Radius.circular(18), // โค้งที่มุมล่างซ้าย
-                  bottomRight: Radius.circular(18), // โค้งที่มุมล่างขวา
+                  bottomLeft: Radius.circular(18),
+                  bottomRight: Radius.circular(18),
                 ),
               ),
               child: Column(
@@ -84,6 +104,8 @@ class _ListpageState extends State<ItemsReceivedpage> {
                 ],
               ),
             ),
+
+            // Buttons for switching views
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
@@ -93,9 +115,15 @@ class _ListpageState extends State<ItemsReceivedpage> {
                     width: screenWidth * 0.35,
                     height: screenHeight * 0.052,
                     child: ElevatedButton(
-                      onPressed: () {},
+                      onPressed: () {
+                        setState(() {
+                          isReceived = true; // Show received items
+                        });
+                      },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFFF7723),
+                        backgroundColor: isReceived
+                            ? const Color(0xFFFF7723)
+                            : const Color(0xFFbfbdbc),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(30),
                         ),
@@ -117,9 +145,15 @@ class _ListpageState extends State<ItemsReceivedpage> {
                     width: screenWidth * 0.35,
                     height: screenHeight * 0.052,
                     child: ElevatedButton(
-                      onPressed: () {},
+                      onPressed: () {
+                        setState(() {
+                          isReceived = false; // Show delivery items
+                        });
+                      },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFbfbdbc),
+                        backgroundColor: !isReceived
+                            ? const Color(0xFFFF7723)
+                            : const Color(0xFFbfbdbc),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(30),
                         ),
@@ -128,7 +162,7 @@ class _ListpageState extends State<ItemsReceivedpage> {
                         'รายการจัดส่ง',
                         style: TextStyle(
                           fontSize: 14,
-                          color: Colors.black,
+                          color: Colors.white,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -137,15 +171,19 @@ class _ListpageState extends State<ItemsReceivedpage> {
                 ),
               ],
             ),
+
+            // Display items based on button selection
             Padding(
               padding: const EdgeInsets.fromLTRB(25, 0, 25, 20),
               child: SizedBox(
                 width: screenWidth,
                 height: screenHeight * 0.6,
                 child: ListView.builder(
-                  itemCount: data.length,
+                  itemCount:
+                      isReceived ? receivedData.length : deliveryData.length,
                   itemBuilder: (context, index) {
-                    final item = data[index];
+                    final item =
+                        isReceived ? receivedData[index] : deliveryData[index];
                     return Padding(
                       padding: const EdgeInsets.only(bottom: 20),
                       child: GestureDetector(
@@ -159,12 +197,12 @@ class _ListpageState extends State<ItemsReceivedpage> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                const Text(
-                                  "ไรเดอร์รับงาน",
+                                Text(
+                                  status,
                                   style: TextStyle(
                                     fontSize: 14,
                                     fontWeight: FontWeight.bold,
-                                    color: Color(0xFFF3A72B),
+                                    color: getStatusColor(),
                                   ),
                                 ),
                                 Padding(
@@ -249,5 +287,23 @@ class _ListpageState extends State<ItemsReceivedpage> {
         ),
       ),
     );
+  }
+
+  // Get status color based on the status value
+  Color getStatusColor() {
+    switch (status) {
+      case "ไรเดอร์รับงาน":
+        return const Color(0xFFF3A72B); // Orange
+      case "รอไรเดอร์มารับสินค้า":
+        return const Color(0xFFFFC107); // Amber
+      case "ไรเดอร์รับสินค้าแล้วและกำลังเดินทาง":
+        return const Color(0xFF2196F3); // Blue
+      case "ไรเดอร์นำส่งสินค้าแล้ว":
+        return const Color(0xFF4CAF50); // Green
+      case "ยกเลิก":
+        return const Color(0xFFFF5722); // Red
+      default:
+        return const Color(0xFF000000); // Default
+    }
   }
 }
