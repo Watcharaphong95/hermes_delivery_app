@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import 'package:hermes_app/pages_user/profile.dart';
 
 class EditProfileUserpage extends StatefulWidget {
   const EditProfileUserpage({super.key});
@@ -198,7 +200,9 @@ class _EditProfileUserpageState extends State<EditProfileUserpage> {
                                   padding: const EdgeInsets.only(
                                       left: 8.0), // ระยะห่างจาก TextField
                                   child: ElevatedButton(
-                                    onPressed: () {},
+                                    onPressed: () {
+                                      Navigator.pop(context)l
+                                    },
                                     style: ElevatedButton.styleFrom(
                                       backgroundColor: const Color(0xFFFF7723),
                                       shape: RoundedRectangleBorder(

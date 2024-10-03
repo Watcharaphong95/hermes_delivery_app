@@ -80,6 +80,34 @@ class _StatuspageState extends State<Statuspage> {
                 ),
               ),
             ),
+            Padding(
+              padding: EdgeInsets.fromLTRB(
+                screenWidth * 0.1,
+                screenHeight * 0.31,
+                screenWidth * 0.1,
+                0,
+              ),
+              child: SizedBox(
+                width: screenWidth,
+                height: screenHeight * 0.2,
+                child: const Card(
+                  child: Text("แผนที่"),
+                ),
+              ),
+            ),
+            Padding(
+              padding: EdgeInsets.fromLTRB(
+                screenWidth * 0.07,
+                screenHeight * 0.54,
+                screenWidth * 0.1,
+                0,
+              ),
+              child: const Text("สถานะการจัดส่ง",
+                  style: TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.bold,
+                  )),
+            ),
           ],
         ),
       ),
