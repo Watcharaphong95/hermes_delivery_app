@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:hermes_app/navbar/navbottomRider.dart';
 import 'package:hermes_app/navbar/navbuttom.dart';
 import 'package:hermes_app/pages_rider/home_rider.dart';
 import 'package:hermes_app/pages_user/user_type.dart';
@@ -164,7 +165,9 @@ class _LoginPageState extends State<LoginPage> {
                                 // Get.to(() => Navbuttompage(
                                 //       selectedPage: 0,
                                 //     ));
-                                Get.to(() => const HomeRiderpage());
+                                Get.to(() => Navbottomrider(
+                                      selectedPage: 0,
+                                    ));
                               },
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: const Color(0xFFFF7723),
