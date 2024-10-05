@@ -2,6 +2,8 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:developer';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:geocoding/geocoding.dart';
@@ -13,9 +15,11 @@ import 'package:google_maps_place_picker_mb/google_maps_place_picker.dart';
 import 'package:google_maps_widget/google_maps_widget.dart';
 import 'package:hermes_app/config/config.dart';
 import 'package:hermes_app/pages_user/gg_map_test.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:map_picker/map_picker.dart';
-import 'dart:io' show Platform;
+import 'dart:io' show File, Platform;
 import 'package:http/http.dart' as http;
+import 'package:firebase_storage/firebase_storage.dart';
 
 class RegisterUserpage extends StatefulWidget {
   const RegisterUserpage({super.key});
@@ -26,6 +30,7 @@ class RegisterUserpage extends StatefulWidget {
 
 class _RegisterUserpageState extends State<RegisterUserpage> {
   final box = GetStorage();
+  var db = FirebaseFirestore.instance;
 
   String apiKey = "", sameAddress = "";
   final _controller = Completer<GoogleMapController>();
@@ -43,6 +48,11 @@ class _RegisterUserpageState extends State<RegisterUserpage> {
   TextEditingController passwordCtl = TextEditingController();
   TextEditingController confirmpasswordCtl = TextEditingController();
   TextEditingController addressCtl = TextEditingController();
+  String pictureUrl = "";
+
+  final ImagePicker picker = ImagePicker();
+  XFile? image;
+  File? savedFile;
 
   @override
   initState() {
@@ -321,7 +331,7 @@ class _RegisterUserpageState extends State<RegisterUserpage> {
                   padding:
                       const EdgeInsets.only(left: 8.0), // ระยะห่างจาก TextField
                   child: ElevatedButton(
-                    onPressed: () {},
+                    onPressed: createAccount,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFFFF7723),
                       shape: RoundedRectangleBorder(
@@ -353,7 +363,86 @@ class _RegisterUserpageState extends State<RegisterUserpage> {
 /////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////
 
-  void addProfileImage() {} // Store the previous selected location
+  void createAccount() async {
+    log(image!.path);
+    if (image == null) return;
+    String fileName = DateTime.now().millisecondsSinceEpoch.toString();
+    Reference ref = FirebaseStorage.instance.ref();
+    Reference refUserProfile = ref.child('profile');
+    Reference imageToUpload = refUserProfile.child(fileName);
+
+    try {
+      await imageToUpload.putFile(File(image!.path));
+      log('test');
+      pictureUrl = await imageToUpload.getDownloadURL();
+      log(pictureUrl);
+    } catch (e) {
+      log('Error!');
+    }
+  }
+
+  void addProfileImage() {
+    showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: const Center(child: Text('เลือกวิธีเพิ่มรูปภาพ')),
+            content: Container(
+              width: screenWidth * 0.5, // Adjust width
+              height: screenHeight * 0.5, // Adjust height
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  InkWell(
+                      onTap: imageFromCamera,
+                      child: SvgPicture.asset(
+                        'assets/images/cameraAdd.svg',
+                        width: screenWidth * 0.3,
+                      )),
+                  SizedBox(
+                    width: screenWidth * 0.07,
+                  ),
+                  InkWell(
+                      onTap: imageFromFile,
+                      child: SvgPicture.asset(
+                        'assets/images/fileAdd.svg',
+                        width: screenWidth * 0.3,
+                      )),
+                ],
+              ),
+            ),
+            actions: [
+              Center(
+                child: FilledButton(
+                    onPressed: () {
+                      Navigator.pop(context);
+                    },
+                    child: const Text('ปิด')),
+              )
+            ],
+          );
+        });
+  }
+
+  Future<void> imageFromCamera() async {
+    image = await picker.pickImage(source: ImageSource.camera);
+    if (image != null) {
+      log(image!.path);
+    } else {
+      log('No image');
+    }
+    setState(() {});
+  }
+
+  Future<void> imageFromFile() async {
+    image = await picker.pickImage(source: ImageSource.gallery);
+    if (image != null) {
+      log(image!.path);
+    } else {
+      log('No image');
+    }
+    setState(() {});
+  }
 
   Future<void> placeSearch() async {
     log('test');

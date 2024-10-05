@@ -1,12 +1,16 @@
 import 'dart:developer';
 import 'dart:io';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_app_check/firebase_app_check.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:hermes_app/firebase_options.dart';
 import 'package:hermes_app/pages_user/login.dart';
 import 'package:permission_handler/permission_handler.dart';
 
@@ -14,6 +18,17 @@ main() async {
   WidgetsFlutterBinding
       .ensureInitialized(); // Ensures proper initialization for async code
   CameraPosition initPosition;
+
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+  FirebaseFirestore.instance.settings = const Settings(
+    persistenceEnabled: true,
+  );
+
+  await FirebaseAppCheck.instance.activate(
+    androidProvider: AndroidProvider.playIntegrity,
+  );
 
   await GetStorage.init();
   final box = GetStorage();
