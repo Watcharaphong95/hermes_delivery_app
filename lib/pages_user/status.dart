@@ -137,13 +137,6 @@ class _StatuspageState extends State<Statuspage> {
                 screenWidth * 0.1,
                 0,
               ),
-              child: SizedBox(
-                width: screenWidth,
-                height: screenHeight * 0.2,
-                child: const Card(
-                  child: Text("แผนที่"),
-                ),
-              ),
             ),
             Padding(
               padding: EdgeInsets.fromLTRB(
