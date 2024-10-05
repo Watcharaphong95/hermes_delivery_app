@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:hermes_app/navbar/navbuttom.dart';
+import 'package:hermes_app/pages_rider/home_rider.dart';
 import 'package:hermes_app/pages_user/user_type.dart';
 
 class LoginPage extends StatefulWidget {
@@ -160,9 +161,10 @@ class _LoginPageState extends State<LoginPage> {
                                 left: 8.0), // ระยะห่างจาก TextField
                             child: ElevatedButton(
                               onPressed: () {
-                                Get.to(() => Navbuttompage(
-                                      selectedPage: 0,
-                                    ));
+                                // Get.to(() => Navbuttompage(
+                                //       selectedPage: 0,
+                                //     ));
+                                Get.to(() => const HomeRiderpage());
                               },
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: const Color(0xFFFF7723),

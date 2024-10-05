@@ -74,18 +74,18 @@ class _SendItemState extends State<SendItem> {
                           children: [
                             Text(
                               'ผู้รับ: นายสมนึก ใจดี',
-                              style: TextStyle(fontSize: 18),
+                              style: TextStyle(fontSize: 16),
                             ),
                             Padding(
                               padding: EdgeInsets.fromLTRB(0, 12, 0, 0),
                               child: Text('เบอร์ผู้รับ: 0987654321',
-                                  style: TextStyle(fontSize: 18)),
+                                  style: TextStyle(fontSize: 16)),
                             ),
                             Padding(
                               padding: EdgeInsets.fromLTRB(0, 12, 0, 0),
                               child: Text(
                                   'ที่อยู่: 123 หมู่ 4 ซอยสุขสันต์ ถนนเพลินสุข ตำบลบางหว้า อำเภอภาษีเจริญ จังหวัดกรุงเทพฯ 10160',
-                                  style: TextStyle(fontSize: 18)),
+                                  style: TextStyle(fontSize: 16)),
                             ),
                           ],
                         ),
@@ -96,7 +96,7 @@ class _SendItemState extends State<SendItem> {
                       child: Text(
                         'รายละเอียดพัสดุ',
                         style: TextStyle(
-                            fontWeight: FontWeight.bold, fontSize: 24),
+                            fontWeight: FontWeight.bold, fontSize: 20),
                       ),
                     ),
                     Padding(
@@ -129,7 +129,7 @@ class _SendItemState extends State<SendItem> {
                       child: Text(
                         'เพิ่มรูปภาพ',
                         style: TextStyle(
-                            fontWeight: FontWeight.bold, fontSize: 24),
+                            fontWeight: FontWeight.bold, fontSize: 20),
                       ),
                     ),
                     Padding(
@@ -154,8 +154,8 @@ class _SendItemState extends State<SendItem> {
                                     height: screenHeight *
                                         0.3, // Ensure the image doesn't overflow vertically
                                   )
-                                : SvgPicture.asset(
-                                    'assets/images/cameraAdd.svg',
+                                : Image.asset(
+                                    'assets/images/Logo_camera.png',
                                     fit: BoxFit
                                         .contain, // Make sure the SVG fits properly
                                     width: screenWidth *
