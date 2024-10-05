@@ -14,7 +14,6 @@ import 'package:google_maps_widget/google_maps_widget.dart';
 import 'package:hermes_app/config/config.dart';
 import 'package:hermes_app/pages_user/gg_map_test.dart';
 import 'package:map_picker/map_picker.dart';
-import 'dart:io' show Platform;
 import 'package:http/http.dart' as http;
 
 class RegisterUserpage extends StatefulWidget {
