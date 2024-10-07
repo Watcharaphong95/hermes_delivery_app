@@ -1,4 +1,9 @@
+import 'dart:developer';
+
 import 'package:flutter/material.dart';
+import 'package:hermes_app/config/config.dart';
+import 'package:hermes_app/models/response/user_search_res.dart';
+import 'package:http/http.dart' as http;
 
 class Homepage extends StatefulWidget {
   const Homepage({super.key});
@@ -8,7 +13,18 @@ class Homepage extends StatefulWidget {
 }
 
 class _HomepageState extends State<Homepage> {
+  String url = "";
+
+  List<PhoneSearchRes> phoneGetResponse = [];
+
+  TextEditingController phoneSearch = TextEditingController();
+
   @override
+  void initState() {
+    super.initState();
+    callApiEndPoint();
+  }
+
   Widget build(BuildContext context) {
     // ขนาดของหน้าจอ
     double screenWidth = MediaQuery.of(context).size.width;
@@ -53,8 +69,9 @@ class _HomepageState extends State<Homepage> {
                         color: const Color(0xFFE6E1E1),
                         borderRadius: BorderRadius.circular(30),
                       ),
-                      child: const TextField(
-                        decoration: InputDecoration(
+                      child: TextField(
+                        controller: phoneSearch,
+                        decoration: const InputDecoration(
                           prefixIcon: Icon(Icons.search),
                           hintText: 'ค้นหาเบอร์ผู้รับสินค้า',
                           hintStyle: TextStyle(
@@ -74,7 +91,7 @@ class _HomepageState extends State<Homepage> {
                     child: Padding(
                       padding: const EdgeInsets.only(left: 8.0),
                       child: ElevatedButton(
-                        onPressed: () {},
+                        onPressed: buttonSearch,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFFFF7723),
                           shape: RoundedRectangleBorder(
@@ -97,12 +114,24 @@ class _HomepageState extends State<Homepage> {
             ),
             Column(
               children: [
-                SizedBox(
-                  height: screenHeight * 0.27,
+                // Check if phoneGetResponse is not null and has items
+                // if (phoneGetResponse != null && phoneGetResponse.isNotEmpty)
+                // Expanded(
+                //   child: ListView(
+                //     children: phoneGetResponse
+                //         .map((phone) => Card(
+                //               child: Text(phone.name),
+                //             ))
+                //         .toList(),
+                //   ),
+                // )
+                // else
+                const SizedBox(
+                  height: 20, // Adjust space as needed
                 ),
                 const Text(
                   "กรุณาค้นหาเบอร์",
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 30,
                     color: Color(0xFFBFBDBC),
                     fontWeight: FontWeight.bold,
@@ -122,5 +151,20 @@ class _HomepageState extends State<Homepage> {
         ),
       ),
     );
+  }
+
+  Future<void> callApiEndPoint() async {
+    await Configuration.getConfig().then((config) {
+      url = config['apiEndPoint'];
+    });
+    // log(url);
+  }
+
+  void buttonSearch() async {
+    var phoneSearchText = phoneSearch.text;
+    var res = await http.get(Uri.parse('$url/user/search/$phoneSearchText'));
+    phoneGetResponse = phoneSearchResFromJson(res.body);
+    log(phoneGetResponse.length.toString());
+    setState(() {});
   }
 }
