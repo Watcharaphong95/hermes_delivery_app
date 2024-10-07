@@ -1,30 +1,26 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:hermes_app/pages_user/home.dart';
-import 'package:hermes_app/pages_user/items_list.dart';
-import 'package:hermes_app/pages_user/profile.dart';
-import 'package:hermes_app/pages_user/send_item.dart';
+import 'package:hermes_app/pages_rider/home_rider.dart';
 
-class Navbuttompage extends StatefulWidget {
-  int selectedPage = 0;
-  Navbuttompage({
+class Navbottom extends StatefulWidget {
+  int selectedPages = 0;
+  Navbottom({
     super.key,
-    required this.selectedPage,
+    required this.selectedPages,
     required String phoneNumber,
   });
 
   @override
-  State<Navbuttompage> createState() => _NavbuttompageState();
+  State<Navbottom> createState() => _NavbottomState();
 }
 
-class _NavbuttompageState extends State<Navbuttompage> {
+class _NavbottomState extends State<Navbottom> {
   late final List<Widget> pageOptions;
+  @override
   @override
   void initState() {
     pageOptions = [
-      const Homepage(),
-      const ItemsList(),
-      const Profilepage(),
+      const HomeRiderpage(),
     ];
     // loadData = _initializeStorage();
     super.initState();
@@ -32,11 +28,10 @@ class _NavbuttompageState extends State<Navbuttompage> {
 
   void onItemTapped(int index) {
     setState(() {
-      widget.selectedPage = index;
+      widget.selectedPages = index;
     });
   }
 
-  @override
   Widget build(BuildContext context) {
     // ขนาดของหน้าจอ
     double screenWidth = MediaQuery.of(context).size.width;
@@ -46,23 +41,6 @@ class _NavbuttompageState extends State<Navbuttompage> {
       // ตรวจสอบว่าเป็นหน้าโปรไฟล์หรือหน้าตรวจผลรางวัลหรือไม่
       bottomNavigationBar: BottomNavigationBar(
         items: [
-          BottomNavigationBarItem(
-            icon: SvgPicture.string(
-              '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" style="fill: rgba(0, 0, 0, 1);transform: ;msFilter:;"><path d="M3 13h1v7c0 1.103.897 2 2 2h12c1.103 0 2-.897 2-2v-7h1a1 1 0 0 0 .707-1.707l-9-9a.999.999 0 0 0-1.414 0l-9 9A1 1 0 0 0 3 13zm7 7v-5h4v5h-4zm2-15.586 6 6V15l.001 5H16v-5c0-1.103-.897-2-2-2h-4c-1.103 0-2 .897-2 2v5H6v-9.586l6-6z"></path></svg>',
-              width: screenWidth * 0.08,
-              height: screenWidth * 0.08,
-              fit: BoxFit.cover,
-              color: const Color.fromARGB(255, 0, 0, 0),
-            ),
-            activeIcon: SvgPicture.string(
-              '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" style="fill: rgba(0, 0, 0, 1);transform: ;msFilter:;"><path d="m21.743 12.331-9-10c-.379-.422-1.107-.422-1.486 0l-9 10a.998.998 0 0 0-.17 1.076c.16.361.518.593.913.593h2v7a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1v-4h4v4a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1v-7h2a.998.998 0 0 0 .743-1.669z"></path></svg>',
-              width: screenWidth * 0.08,
-              height: screenWidth * 0.08,
-              fit: BoxFit.cover,
-              color: const Color(0xFFFF7723),
-            ),
-            label: 'หน้าหลัก',
-          ),
           BottomNavigationBarItem(
             icon: SvgPicture.string(
               '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" style="fill: rgba(0, 0, 0, 1);transform: ;msFilter:;"><path d="M19.903 8.586a.997.997 0 0 0-.196-.293l-6-6a.997.997 0 0 0-.293-.196c-.03-.014-.062-.022-.094-.033a.991.991 0 0 0-.259-.051C13.04 2.011 13.021 2 13 2H6c-1.103 0-2 .897-2 2v16c0 1.103.897 2 2 2h12c1.103 0 2-.897 2-2V9c0-.021-.011-.04-.013-.062a.952.952 0 0 0-.051-.259c-.01-.032-.019-.063-.033-.093zM16.586 8H14V5.414L16.586 8zM6 20V4h6v5a1 1 0 0 0 1 1h5l.002 10H6z"></path><path d="M8 12h8v2H8zm0 4h8v2H8zm0-8h2v2H8z"></path></svg>',
@@ -98,7 +76,7 @@ class _NavbuttompageState extends State<Navbuttompage> {
             label: 'โปรไฟล์',
           ),
         ],
-        currentIndex: widget.selectedPage,
+        currentIndex: widget.selectedPages,
         onTap: onItemTapped,
         selectedLabelStyle: TextStyle(
           fontFamily: 'prompt',
@@ -116,7 +94,7 @@ class _NavbuttompageState extends State<Navbuttompage> {
         type: BottomNavigationBarType.fixed,
       ),
 
-      body: pageOptions[widget.selectedPage],
+      body: pageOptions[widget.selectedPages],
     );
   }
 }
