@@ -1,9 +1,21 @@
+import 'dart:convert';
+import 'dart:developer';
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+<<<<<<< HEAD
+import 'package:get_storage/get_storage.dart';
+import 'package:hermes_app/config/config.dart';
+import 'package:hermes_app/models/select_user_all.dart';
+import 'package:hermes_app/models/user_login.dart';
+import 'package:hermes_app/navbar/navbottom.dart';
+=======
 import 'package:hermes_app/navbar/navbottomRider.dart';
+>>>>>>> 3cf9a72bee2253c647e10d4d85bf1948be9cda9a
 import 'package:hermes_app/navbar/navbuttom.dart';
 import 'package:hermes_app/pages_rider/home_rider.dart';
 import 'package:hermes_app/pages_user/user_type.dart';
+import 'package:http/http.dart' as http;
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -13,6 +25,12 @@ class LoginPage extends StatefulWidget {
 }
 
 class _LoginPageState extends State<LoginPage> {
+  final box = GetStorage();
+
+  TextEditingController phoneCtl = TextEditingController();
+  TextEditingController passwordCtl = TextEditingController();
+  String url = '';
+
   @override
   Widget build(BuildContext context) {
     // ขนาดของหน้าจอ
@@ -95,8 +113,9 @@ class _LoginPageState extends State<LoginPage> {
                               color: const Color(0xFFE6E1E1),
                               borderRadius: BorderRadius.circular(30),
                             ),
-                            child: const TextField(
-                              decoration: InputDecoration(
+                            child: TextField(
+                              controller: phoneCtl,
+                              decoration: const InputDecoration(
                                 prefixIcon: Icon(Icons.phone),
                                 hintText: 'เบอร์โทรศัพท์',
                                 hintStyle: TextStyle(
@@ -117,8 +136,9 @@ class _LoginPageState extends State<LoginPage> {
                               color: const Color(0xFFE6E1E1),
                               borderRadius: BorderRadius.circular(30),
                             ),
-                            child: const TextField(
-                              decoration: InputDecoration(
+                            child: TextField(
+                              controller: passwordCtl,
+                              decoration: const InputDecoration(
                                 prefixIcon: Icon(Icons.lock),
                                 hintText: 'รหัส',
                                 hintStyle: TextStyle(
@@ -162,12 +182,16 @@ class _LoginPageState extends State<LoginPage> {
                                 left: 8.0), // ระยะห่างจาก TextField
                             child: ElevatedButton(
                               onPressed: () {
+<<<<<<< HEAD
+                                login();
+=======
                                 Get.to(() => Navbuttompage(
                                       selectedPage: 0,
                                     ));
                                 // Get.to(() => Navbottomrider(
                                 //       selectedPage: 0,
                                 //     ));
+>>>>>>> 3cf9a72bee2253c647e10d4d85bf1948be9cda9a
                               },
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: const Color(0xFFFF7723),
@@ -216,5 +240,63 @@ class _LoginPageState extends State<LoginPage> {
         ),
       ),
     );
+  }
+
+  void login() async {
+    if (phoneCtl.text.isNotEmpty && passwordCtl.text.isNotEmpty) {
+      UserLogin userlogin = UserLogin(
+        phone: phoneCtl.text,
+        password: passwordCtl.text,
+      );
+
+      var config = await Configuration.getConfig();
+      url = config['apiEndpoint'];
+
+      try {
+        // ส่งคำขอเข้าสู่ระบบไปยัง API
+        final response = await http.post(
+          Uri.parse('$url/user/login'),
+          body: json.encode(userlogin.toJson()),
+          headers: {"Content-Type": "application/json; charset=utf-8"},
+        );
+
+        if (response.statusCode == 200) {
+          var user = selectUserAllFromJson(response.body);
+          log('Login success: ${user.phone}');
+
+          box.write('phone', user.phone);
+          box.write('uid', user.uid);
+          log(box.read('phone'));
+          if (user.type == 1) {
+            Get.to(() => Navbuttompage(
+                  selectedPage: 0,
+                  phoneNumber: user.phone,
+                ));
+          } else if (user.type == 2) {
+            Get.to(() => Navbottom(
+                  selectedPages: 0,
+                  phoneNumber: user.phone,
+                ));
+          }
+        } else {
+          log('Login failed: ${response.statusCode}');
+          // แสดงข้อความแจ้งเตือนเมื่อเข้าสู่ระบบล้มเหลว
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Invalid phone or password')),
+          );
+        }
+      } catch (error) {
+        log('Error during login: $error');
+        // แสดงข้อความแจ้งเตือนเมื่อเกิดข้อผิดพลาด
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $error')),
+        );
+      }
+    } else {
+      // แสดงข้อความแจ้งเตือนหากกรอกข้อมูลไม่ครบ
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter phone and password')),
+      );
+    }
   }
 }

@@ -223,6 +223,7 @@ class _ShippingpageState extends State<Shippingpage> {
                             onPressed: () {
                               Get.to(() => Navbuttompage(
                                     selectedPage: 0,
+                                    phoneNumber: '',
                                   ));
                             },
                             style: ElevatedButton.styleFrom(

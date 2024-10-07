@@ -14,12 +14,15 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:google_maps_place_picker_mb/google_maps_place_picker.dart';
 import 'package:google_maps_widget/google_maps_widget.dart';
 import 'package:hermes_app/config/config.dart';
+import 'package:hermes_app/models/user_register_req.dart';
 import 'package:hermes_app/pages_user/gg_map_test.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:map_picker/map_picker.dart';
 import 'dart:io' show File, Platform;
 import 'package:http/http.dart' as http;
 import 'package:firebase_storage/firebase_storage.dart';
+import 'dart:io'; // For File
+import 'package:image_picker/image_picker.dart'; // For ImagePicker and XFile
 
 class RegisterUserpage extends StatefulWidget {
   const RegisterUserpage({super.key});
@@ -53,6 +56,7 @@ class _RegisterUserpageState extends State<RegisterUserpage> {
   final ImagePicker picker = ImagePicker();
   XFile? image;
   File? savedFile;
+  String url = '';
 
   @override
   initState() {
@@ -132,11 +136,20 @@ class _RegisterUserpageState extends State<RegisterUserpage> {
               padding: const EdgeInsets.all(18),
               child: GestureDetector(
                 onTap: addProfileImage,
-                child: Image.asset(
-                  'assets/images/Logo_register.png',
-                  width: screenWidth,
-                  height: screenHeight * 0.18,
-                ),
+                child: image != null
+                    ? ClipOval(
+                        child: Image.file(
+                          File(image!.path),
+                          width: screenWidth * 0.38,
+                          height: screenWidth * 0.38,
+                          fit: BoxFit.cover,
+                        ),
+                      )
+                    : Image.asset(
+                        'assets/images/Logo_register.png',
+                        width: screenWidth,
+                        height: screenWidth * 0.38,
+                      ),
               ),
             ),
             const SizedBox(
@@ -379,73 +392,125 @@ class _RegisterUserpageState extends State<RegisterUserpage> {
     } catch (e) {
       log('Error!');
     }
+
+    var config = await Configuration.getConfig();
+    url = config['apiEndpoint'];
+    if (phoneCtl.text.isEmpty ||
+        nameCtl.text.isEmpty ||
+        passwordCtl.text.isEmpty ||
+        confirmpasswordCtl.text.isEmpty ||
+        addressCtl.text.isEmpty ||
+        pictureUrl.isEmpty) {}
+    if (phoneCtl.text.length == 10) {
+      if (passwordCtl.text == confirmpasswordCtl.text) {
+        UserRegisterReq userRegisterReq = UserRegisterReq(
+            phone: phoneCtl.text,
+            name: nameCtl.text,
+            password: passwordCtl.text,
+            address: addressCtl.text,
+            lat: currentLocation?.latitude ??
+                0.0, // ใช้ 0.0 หาก latitude เป็น null
+            lng: currentLocation?.longitude ??
+                0.0, // ใช้ 0.0 หาก longitude เป็น null
+            picture: pictureUrl!);
+        try {
+          final response = await http.post(
+            Uri.parse("$url/user/registerUser"),
+            headers: {"Content-Type": "application/json; charset=utf-8"},
+            body: json.encode(
+                userRegisterReq.toJson()), // แปลงเป็น JSON String ที่นี่
+          );
+
+          log('Registration response: ${response.body}');
+        } catch (error) {
+          log('Error during registration: $error');
+        }
+      } else {
+        log('Passwords do not match');
+      }
+    } else {
+      log('Phone number must be 10 digits');
+    }
   }
 
   void addProfileImage() {
     showDialog(
-        context: context,
-        builder: (BuildContext context) {
-          return AlertDialog(
-            title: const Center(child: Text('เลือกวิธีเพิ่มรูปภาพ')),
-            content: Container(
-              width: screenWidth * 0.5, // Adjust width
-              height: screenHeight * 0.5, // Adjust height
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: [
-                  InkWell(
-                      onTap: imageFromCamera,
-                      child: SvgPicture.asset(
-                        'assets/images/cameraAdd.svg',
-                        width: screenWidth * 0.3,
-                      )),
-                  SizedBox(
-                    width: screenWidth * 0.07,
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Center(child: Text('เลือกวิธีเพิ่มรูปภาพ')),
+          content: Container(
+            width: screenWidth * 0.5, // ปรับขนาด width
+            height: screenHeight * 0.5, // ปรับขนาด height
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                InkWell(
+                  onTap: imageFromCamera,
+                  child: SvgPicture.asset(
+                    'assets/images/cameraAdd.svg',
+                    width: screenWidth * 0.3,
                   ),
-                  InkWell(
-                      onTap: imageFromFile,
-                      child: SvgPicture.asset(
-                        'assets/images/fileAdd.svg',
-                        width: screenWidth * 0.3,
-                      )),
-                ],
+                ),
+                SizedBox(width: screenWidth * 0.07),
+                InkWell(
+                  onTap: imageFromFile,
+                  child: SvgPicture.asset(
+                    'assets/images/fileAdd.svg',
+                    width: screenWidth * 0.3,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            Center(
+              child: FilledButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                },
+                child: const Text('ปิด'),
               ),
             ),
-            actions: [
-              Center(
-                child: FilledButton(
-                    onPressed: () {
-                      Navigator.pop(context);
-                    },
-                    child: const Text('ปิด')),
-              )
-            ],
-          );
-        });
+          ],
+        );
+      },
+    );
   }
 
   Future<void> imageFromCamera() async {
-    image = await picker.pickImage(source: ImageSource.camera);
-    if (image != null) {
+    // Pick an image from the camera
+    final XFile? pickedImage =
+        await picker.pickImage(source: ImageSource.camera);
+    if (pickedImage != null) {
+      image = pickedImage; // Store XFile directly
+      pictureUrl =
+          pickedImage.path; // Store the path of the image in pictureUrl
       log(image!.path);
     } else {
       log('No image');
     }
-    setState(() {});
+    setState(() {}); // Update UI
   }
 
   Future<void> imageFromFile() async {
-    image = await picker.pickImage(source: ImageSource.gallery);
-    if (image != null) {
+    // Pick an image from the gallery
+    final XFile? pickedImage =
+        await picker.pickImage(source: ImageSource.gallery);
+    if (pickedImage != null) {
+      image = pickedImage; // Store XFile directly
+      pictureUrl =
+          pickedImage.path; // Store the path of the image in pictureUrl
       log(image!.path);
     } else {
       log('No image');
     }
-    setState(() {});
+    setState(() {}); // Update UI
   }
 
+// ฟังก์ชันสำหรับค้นหาสถานที่
   Future<void> placeSearch() async {
-    log('test');
+    log('Searching for place...');
     if (addressCtl.text.length > 1) {
       final String url =
           'https://maps.googleapis.com/maps/api/place/textsearch/json?query=${addressCtl.text}&language=th&key=${apiKey}';
@@ -459,12 +524,17 @@ class _RegisterUserpageState extends State<RegisterUserpage> {
 
           initPosition =
               CameraPosition(target: LatLng(latitude, longitude), zoom: 17);
+          log("Location found: Latitude: $latitude, Longitude: $longitude");
+        } else {
+          log('Place not found.');
         }
+      } else {
+        log('Error fetching data: ${response.statusCode}');
       }
-      showMapPicker();
+      showMapPicker(); // เรียกฟังก์ชันเพื่อแสดงแผนที่
       setState(() {});
     } else {
-      log('no addressCtl');
+      log('Address input is too short.');
     }
   }
 

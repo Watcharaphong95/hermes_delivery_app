@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:developer';
 import 'dart:io';
 
@@ -5,7 +6,10 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
+import 'package:hermes_app/config/config.dart';
+import 'package:hermes_app/models/rider_register_req.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:http/http.dart' as http;
 
 class RegisterRiderpage extends StatefulWidget {
   const RegisterRiderpage({super.key});
@@ -23,6 +27,13 @@ class _RegisterRiderpageState extends State<RegisterRiderpage> {
   final ImagePicker picker = ImagePicker();
   XFile? image;
   File? savedFile;
+  String url = '';
+
+  TextEditingController phoneCtl = TextEditingController();
+  TextEditingController nameCtl = TextEditingController();
+  TextEditingController passwordCtl = TextEditingController();
+  TextEditingController confirmpasswordCtl = TextEditingController();
+  TextEditingController licenseplateCtl = TextEditingController();
 
   @override
   Widget build(BuildContext context) {
@@ -79,11 +90,20 @@ class _RegisterRiderpageState extends State<RegisterRiderpage> {
               padding: const EdgeInsets.all(18),
               child: GestureDetector(
                 onTap: addProfileImage,
-                child: Image.asset(
-                  'assets/images/Logo_register.png',
-                  width: screenWidth,
-                  height: screenHeight * 0.18,
-                ),
+                child: image != null
+                    ? ClipOval(
+                        child: Image.file(
+                          File(image!.path),
+                          width: screenWidth * 0.38,
+                          height: screenWidth * 0.38,
+                          fit: BoxFit.cover,
+                        ),
+                      )
+                    : Image.asset(
+                        'assets/images/Logo_register.png',
+                        width: screenWidth,
+                        height: screenWidth * 0.38,
+                      ),
               ),
             ),
             const SizedBox(
@@ -101,8 +121,9 @@ class _RegisterRiderpageState extends State<RegisterRiderpage> {
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(30),
                       ),
-                      child: const TextField(
-                        decoration: InputDecoration(
+                      child: TextField(
+                        controller: phoneCtl,
+                        decoration: const InputDecoration(
                           hintText: 'หมายเลขโทรศัพท์',
                           hintStyle: TextStyle(
                               fontSize: 14, color: Color.fromARGB(97, 0, 0, 0)),
@@ -124,8 +145,9 @@ class _RegisterRiderpageState extends State<RegisterRiderpage> {
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(30),
                       ),
-                      child: const TextField(
-                        decoration: InputDecoration(
+                      child: TextField(
+                        controller: nameCtl,
+                        decoration: const InputDecoration(
                           hintText: 'ชื่อ',
                           hintStyle: TextStyle(
                               fontSize: 14, color: Color.fromARGB(97, 0, 0, 0)),
@@ -147,8 +169,9 @@ class _RegisterRiderpageState extends State<RegisterRiderpage> {
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(30),
                       ),
-                      child: const TextField(
-                        decoration: InputDecoration(
+                      child: TextField(
+                        controller: passwordCtl,
+                        decoration: const InputDecoration(
                           hintText: 'รหัสผ่าน',
                           hintStyle: TextStyle(
                               fontSize: 14, color: Color.fromARGB(97, 0, 0, 0)),
@@ -170,8 +193,9 @@ class _RegisterRiderpageState extends State<RegisterRiderpage> {
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(30),
                       ),
-                      child: const TextField(
-                        decoration: InputDecoration(
+                      child: TextField(
+                        controller: confirmpasswordCtl,
+                        decoration: const InputDecoration(
                           hintText: 'ยืนยันรหัสผ่าน',
                           hintStyle: TextStyle(
                               fontSize: 14, color: Color.fromARGB(97, 0, 0, 0)),
@@ -193,8 +217,9 @@ class _RegisterRiderpageState extends State<RegisterRiderpage> {
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(30),
                       ),
-                      child: const TextField(
-                        decoration: InputDecoration(
+                      child: TextField(
+                        controller: licenseplateCtl,
+                        decoration: const InputDecoration(
                           hintText: 'ป้ายทะเบียนรถ',
                           hintStyle: TextStyle(
                               fontSize: 14, color: Color.fromARGB(97, 0, 0, 0)),
@@ -242,8 +267,9 @@ class _RegisterRiderpageState extends State<RegisterRiderpage> {
   }
 
   Future<void> createAccount() async {
-    log(image!.path);
+    log(image?.path ?? 'No image selected');
     if (image == null) return;
+
     String fileName = DateTime.now().millisecondsSinceEpoch.toString();
     Reference ref = FirebaseStorage.instance.ref();
     Reference refUserProfile = ref.child('profile');
@@ -251,11 +277,59 @@ class _RegisterRiderpageState extends State<RegisterRiderpage> {
 
     try {
       await imageToUpload.putFile(File(image!.path));
-      log('test');
+      log('Image uploaded successfully');
       pictureUrl = await imageToUpload.getDownloadURL();
-      log(pictureUrl);
+      log('Picture URL: $pictureUrl');
     } catch (e) {
-      log('Error!');
+      log('Error uploading image: $e');
+      return; // Exit if upload fails
+    }
+
+    var config = await Configuration.getConfig();
+    url = config['apiEndpoint'];
+    if (phoneCtl.text.isEmpty ||
+        nameCtl.text.isEmpty ||
+        passwordCtl.text.isEmpty ||
+        confirmpasswordCtl.text.isEmpty ||
+        licenseplateCtl.text.isEmpty ||
+        pictureUrl.isEmpty) {
+      log('All fields must be filled in.');
+      return; // Exit if validation fails
+    }
+
+    int type = 2;
+    if (phoneCtl.text.length == 10) {
+      if (passwordCtl.text == confirmpasswordCtl.text) {
+        RiderRegisterReq userRegisterReq = RiderRegisterReq(
+          phone: phoneCtl.text,
+          name: nameCtl.text,
+          password: passwordCtl.text,
+          picture: pictureUrl,
+          plate: licenseplateCtl.text,
+          type: type.toString(),
+        );
+
+        try {
+          final response = await http.post(
+            Uri.parse("$url/user/registerRider"),
+            headers: {"Content-Type": "application/json; charset=utf-8"},
+            body: json.encode(userRegisterReq.toJson()),
+          );
+
+          log('Registration response: ${response.statusCode} ${response.body}');
+          if (response.statusCode == 200) {
+            log('Registration successful!');
+          } else {
+            log('Registration failed with status code: ${response.statusCode}');
+          }
+        } catch (error) {
+          log('Error during registration: $error');
+        }
+      } else {
+        log('Passwords do not match.');
+      }
+    } else {
+      log('Phone number must be 10 digits.');
     }
   }
 
@@ -303,22 +377,32 @@ class _RegisterRiderpageState extends State<RegisterRiderpage> {
   }
 
   Future<void> imageFromCamera() async {
-    image = await picker.pickImage(source: ImageSource.camera);
-    if (image != null) {
+    // Pick an image from the camera
+    final XFile? pickedImage =
+        await picker.pickImage(source: ImageSource.camera);
+    if (pickedImage != null) {
+      image = pickedImage; // Store XFile directly
+      pictureUrl =
+          pickedImage.path; // Store the path of the image in pictureUrl
       log(image!.path);
     } else {
       log('No image');
     }
-    setState(() {});
+    setState(() {}); // Update UI
   }
 
   Future<void> imageFromFile() async {
-    image = await picker.pickImage(source: ImageSource.gallery);
-    if (image != null) {
+    // Pick an image from the gallery
+    final XFile? pickedImage =
+        await picker.pickImage(source: ImageSource.gallery);
+    if (pickedImage != null) {
+      image = pickedImage; // Store XFile directly
+      pictureUrl =
+          pickedImage.path; // Store the path of the image in pictureUrl
       log(image!.path);
     } else {
       log('No image');
     }
-    setState(() {});
+    setState(() {}); // Update UI
   }
 }
