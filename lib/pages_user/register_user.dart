@@ -14,7 +14,7 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:google_maps_place_picker_mb/google_maps_place_picker.dart';
 import 'package:google_maps_widget/google_maps_widget.dart';
 import 'package:hermes_app/config/config.dart';
-import 'package:hermes_app/models/user_register_req.dart';
+import 'package:hermes_app/models/request/user_register_req.dart';
 import 'package:hermes_app/pages_user/gg_map_test.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:map_picker/map_picker.dart';
@@ -394,7 +394,7 @@ class _RegisterUserpageState extends State<RegisterUserpage> {
     }
 
     var config = await Configuration.getConfig();
-    url = config['apiEndpoint'];
+    url = config['apiEndPoint'];
     if (phoneCtl.text.isEmpty ||
         nameCtl.text.isEmpty ||
         passwordCtl.text.isEmpty ||

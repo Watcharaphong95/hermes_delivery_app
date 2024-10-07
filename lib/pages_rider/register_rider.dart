@@ -286,7 +286,7 @@ class _RegisterRiderpageState extends State<RegisterRiderpage> {
     }
 
     var config = await Configuration.getConfig();
-    url = config['apiEndpoint'];
+    url = config['apiEndPoint'];
     if (phoneCtl.text.isEmpty ||
         nameCtl.text.isEmpty ||
         passwordCtl.text.isEmpty ||
