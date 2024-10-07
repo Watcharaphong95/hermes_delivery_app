@@ -3,15 +3,12 @@ import 'dart:developer';
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-<<<<<<< HEAD
 import 'package:get_storage/get_storage.dart';
 import 'package:hermes_app/config/config.dart';
 import 'package:hermes_app/models/select_user_all.dart';
 import 'package:hermes_app/models/user_login.dart';
 import 'package:hermes_app/navbar/navbottom.dart';
-=======
 import 'package:hermes_app/navbar/navbottomRider.dart';
->>>>>>> 3cf9a72bee2253c647e10d4d85bf1948be9cda9a
 import 'package:hermes_app/navbar/navbuttom.dart';
 import 'package:hermes_app/pages_rider/home_rider.dart';
 import 'package:hermes_app/pages_user/user_type.dart';
@@ -182,16 +179,7 @@ class _LoginPageState extends State<LoginPage> {
                                 left: 8.0), // ระยะห่างจาก TextField
                             child: ElevatedButton(
                               onPressed: () {
-<<<<<<< HEAD
                                 login();
-=======
-                                Get.to(() => Navbuttompage(
-                                      selectedPage: 0,
-                                    ));
-                                // Get.to(() => Navbottomrider(
-                                //       selectedPage: 0,
-                                //     ));
->>>>>>> 3cf9a72bee2253c647e10d4d85bf1948be9cda9a
                               },
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: const Color(0xFFFF7723),
