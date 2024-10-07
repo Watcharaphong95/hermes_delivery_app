@@ -1,22 +1,48 @@
 import 'dart:developer';
 import 'dart:io';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:get/get.dart';
+import 'package:hermes_app/config/config.dart';
+import 'package:hermes_app/models/response/order_firebase_res.dart';
+import 'package:hermes_app/models/response/user_search_res.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:http/http.dart' as http;
+import 'package:intl/date_symbol_data_local.dart';
+import 'package:intl/intl.dart';
 
 class SendItem extends StatefulWidget {
-  const SendItem({super.key});
+  int uid;
+  SendItem({super.key, required this.uid});
 
   @override
   State<SendItem> createState() => _SendItemState();
 }
 
 class _SendItemState extends State<SendItem> {
+  String url = "";
+  String pictureUrl = "";
+
+  var db = FirebaseFirestore.instance;
+
+  List<PhoneSearchRes> receiverData = [];
+
   double screenWidth = 0, screenHeight = 0;
   final ImagePicker picker = ImagePicker();
   XFile? image;
   File? savedFile;
+
+  int uidReceiver = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    callApiEndPoint();
+    uidReceiver = widget.uid;
+  }
 
   TextEditingController itemDetails = TextEditingController();
 
@@ -66,27 +92,40 @@ class _SendItemState extends State<SendItem> {
                       decoration: BoxDecoration(
                           color: const Color(0xFFE6E1E1),
                           borderRadius: BorderRadius.circular(11)),
-                      child: const Padding(
-                        padding:
-                            EdgeInsets.symmetric(horizontal: 15, vertical: 10),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 15, vertical: 10),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              'ผู้รับ: นายสมนึก ใจดี',
-                              style: TextStyle(fontSize: 16),
-                            ),
-                            Padding(
-                              padding: EdgeInsets.fromLTRB(0, 12, 0, 0),
-                              child: Text('เบอร์ผู้รับ: 0987654321',
-                                  style: TextStyle(fontSize: 16)),
-                            ),
-                            Padding(
-                              padding: EdgeInsets.fromLTRB(0, 12, 0, 0),
-                              child: Text(
-                                  'ที่อยู่: 123 หมู่ 4 ซอยสุขสันต์ ถนนเพลินสุข ตำบลบางหว้า อำเภอภาษีเจริญ จังหวัดกรุงเทพฯ 10160',
-                                  style: TextStyle(fontSize: 16)),
-                            ),
+                            receiverData.isEmpty
+                                ? const Center(
+                                    child: CircularProgressIndicator())
+                                : Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                          'ชื่อผู้รับ: ${receiverData[0].name}',
+                                          style: const TextStyle(fontSize: 16)),
+                                      Padding(
+                                        padding: const EdgeInsets.fromLTRB(
+                                            0, 12, 0, 0),
+                                        child: Text(
+                                            'เบอร์ผู้รับ: ${receiverData[0].phone}',
+                                            style:
+                                                const TextStyle(fontSize: 16)),
+                                      ),
+                                      Padding(
+                                        padding: const EdgeInsets.fromLTRB(
+                                            0, 12, 0, 0),
+                                        child: Text(
+                                            'ที่อยู่: ${receiverData[0].address}',
+                                            style:
+                                                const TextStyle(fontSize: 16)),
+                                      )
+                                    ],
+                                  ),
                           ],
                         ),
                       ),
@@ -169,13 +208,16 @@ class _SendItemState extends State<SendItem> {
                     ),
                     Padding(
                       padding: const EdgeInsets.fromLTRB(0, 15, 0, 15),
-                      child: Container(
+                      child: SizedBox(
                         width: screenWidth * 0.9,
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceAround,
                           children: [
                             FilledButton(
-                              onPressed: () {},
+                              onPressed: () {
+                                Get.back();
+                                // readData();
+                              },
                               style: FilledButton.styleFrom(
                                   backgroundColor: const Color(0xFFBFBDBC)),
                               child: const Text(
@@ -184,7 +226,7 @@ class _SendItemState extends State<SendItem> {
                               ),
                             ),
                             FilledButton(
-                              onPressed: () {},
+                              onPressed: confirmSendItem,
                               style: FilledButton.styleFrom(
                                   backgroundColor: const Color(0xFFFF7723)),
                               child: const Text('ยืนยัน',
@@ -204,13 +246,31 @@ class _SendItemState extends State<SendItem> {
     );
   }
 
+  //////////////////////////////////////////////////////////////////////////////////
+  //////////////////////////////////////////////////////////////////////////////////
+  //////////////////////////////////////////////////////////////////////////////////
+  //////////////////////////////////////////////////////////////////////////////////
+  //////////////////////////////////////////////////////////////////////////////////
+  //////////////////////////////////////////////////////////////////////////////////
+
+  Future<void> callApiEndPoint() async {
+    await Configuration.getConfig().then((config) {
+      url = config['apiEndPoint'];
+    });
+    log(url);
+    var res = await http.get(Uri.parse('$url/user/customer/$uidReceiver'));
+    receiverData = phoneSearchResFromJson(res.body);
+    log(receiverData[0].address);
+    setState(() {});
+  }
+
   void imagePicker() {
     showDialog(
         context: context,
         builder: (BuildContext context) {
           return AlertDialog(
             title: const Center(child: Text('เลือกวิธีเพิ่มรูปภาพ')),
-            content: Container(
+            content: SizedBox(
               width: screenWidth * 0.5, // Adjust width
               height: screenHeight * 0.5, // Adjust height
               child: Column(
@@ -265,5 +325,61 @@ class _SendItemState extends State<SendItem> {
       log('No image');
     }
     setState(() {});
+  }
+
+  Future<void> confirmSendItem() async {
+    if (image == null) return;
+    await imageUpload();
+
+    var data = {
+      'createAt': DateTime.now(),
+      'receiverUid': receiverData[0].uid,
+      'detail': itemDetails.text,
+      'picture': pictureUrl,
+    };
+
+    db
+        .collection('order')
+        .doc(DateTime.timestamp().millisecondsSinceEpoch.toString())
+        .set(data);
+  }
+
+  // void readData() async {
+  //   await initializeDateFormatting('th', null);
+  //   var result =
+  //       await db.collection('order').where('receiverUid', isEqualTo: 9).get();
+  //   // log(result.docs.length.toString());
+
+  //   List<OrderRes> orders = result.docs.map((doc) {
+  //     return OrderRes.fromFirestore(doc.data(), doc.id);
+  //   }).toList();
+
+  //   // Sort by time latest first
+  //   orders.sort((a, b) => b.createAt.compareTo(a.createAt));
+
+  //   for (OrderRes order in orders) {
+  //     log('Receiver UID: ${order.receiverUid}');
+  //     log('Detail: ${order.detail}');
+  //     log('Picture URL: ${order.picture}');
+  //     log('Formatted Date: ${order.formattedDate}');
+  //     log('Document ID: ${order.documentId}');
+  //   }
+  // }
+
+  Future<void> imageUpload() async {
+    log(image!.path);
+    String fileName = DateTime.now().millisecondsSinceEpoch.toString();
+    Reference ref = FirebaseStorage.instance.ref();
+    Reference refUserProfile = ref.child('order');
+    Reference imageToUpload = refUserProfile.child(fileName);
+
+    try {
+      await imageToUpload.putFile(File(image!.path));
+      log('test');
+      pictureUrl = await imageToUpload.getDownloadURL();
+      log(pictureUrl);
+    } catch (e) {
+      log('Error!');
+    }
   }
 }

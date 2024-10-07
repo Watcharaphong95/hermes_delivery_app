@@ -7,7 +7,7 @@ import 'package:hermes_app/navbar/navbuttom.dart';
 import 'package:image_picker/image_picker.dart';
 
 class Shippingpage extends StatefulWidget {
-  const Shippingpage({super.key});
+  Shippingpage({super.key});
 
   @override
   State<Shippingpage> createState() => _ShippingpageState();
