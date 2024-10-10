@@ -394,7 +394,7 @@ class _RegisterUserpageState extends State<RegisterUserpage> {
     }
 
     var config = await Configuration.getConfig();
-    url = config['apiEndpoint'];
+    url = config['apiEndPoint'];
     if (phoneCtl.text.isEmpty ||
         nameCtl.text.isEmpty ||
         passwordCtl.text.isEmpty ||
@@ -415,7 +415,7 @@ class _RegisterUserpageState extends State<RegisterUserpage> {
             picture: pictureUrl!);
         try {
           final response = await http.post(
-            Uri.parse("$url/user/registerUser"),
+            Uri.parse("$url/user/register"),
             headers: {"Content-Type": "application/json; charset=utf-8"},
             body: json.encode(
                 userRegisterReq.toJson()), // แปลงเป็น JSON String ที่นี่

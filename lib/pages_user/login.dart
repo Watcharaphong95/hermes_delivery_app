@@ -7,9 +7,9 @@ import 'package:get_storage/get_storage.dart';
 import 'package:hermes_app/config/config.dart';
 import 'package:hermes_app/models/select_user_all.dart';
 import 'package:hermes_app/models/user_login.dart';
-import 'package:hermes_app/navbar/navbottom.dart';
 import 'package:hermes_app/navbar/navbottomRider.dart';
-import 'package:hermes_app/navbar/navbuttom.dart';
+import 'package:hermes_app/navbar/navbottomRider.dart';
+import 'package:hermes_app/navbar/navbuttomUser.dart';
 import 'package:hermes_app/pages_rider/home_rider.dart';
 import 'package:hermes_app/pages_user/user_type.dart';
 import 'package:http/http.dart' as http;
@@ -249,19 +249,24 @@ class _LoginPageState extends State<LoginPage> {
         );
 
         if (response.statusCode == 200) {
+          log(response.body);
           var user = selectUserAllFromJson(response.body);
           log('Login success: ${user.phone}');
 
           box.write('phone', user.phone);
-          box.write('uid', user.uid);
-          log(box.read('phone'));
+          if (user.uid != null) {
+            box.write('uid', user.uid.toString());
+          } else {
+            box.write('uid', user.rid.toString());
+          }
+          log(box.read('uid'));
           if (user.type == 1) {
-            Get.to(() => Navbuttompage(
+            Get.to(() => NavbuttompageUser(
                   selectedPage: 0,
                   phoneNumber: user.phone,
                 ));
           } else if (user.type == 2) {
-            Get.to(() => Navbottom(
+            Get.to(() => NavbottompageRider(
                   selectedPages: 0,
                   phoneNumber: user.phone,
                 ));

@@ -4,19 +4,19 @@ import 'package:hermes_app/pages_user/home.dart';
 import 'package:hermes_app/pages_user/items_list.dart';
 import 'package:hermes_app/pages_user/profile.dart';
 
-class Navbuttompage extends StatefulWidget {
+class NavbuttompageUser extends StatefulWidget {
   int selectedPage = 0;
-  Navbuttompage({
+  NavbuttompageUser({
     super.key,
     required this.selectedPage,
     required String phoneNumber,
   });
 
   @override
-  State<Navbuttompage> createState() => _NavbuttompageState();
+  State<NavbuttompageUser> createState() => _NavbuttompageState();
 }
 
-class _NavbuttompageState extends State<Navbuttompage> {
+class _NavbuttompageState extends State<NavbuttompageUser> {
   late final List<Widget> pageOptions;
   @override
   void initState() {

@@ -16,7 +16,6 @@ class RiderRegisterReq {
   String password;
   String picture;
   String plate;
-  String type;
 
   RiderRegisterReq({
     required this.phone,
@@ -24,7 +23,6 @@ class RiderRegisterReq {
     required this.password,
     required this.picture,
     required this.plate,
-    required this.type,
   });
 
   factory RiderRegisterReq.fromJson(Map<String, dynamic> json) =>
@@ -34,7 +32,6 @@ class RiderRegisterReq {
         password: json["password"],
         picture: json["picture"],
         plate: json["plate"],
-        type: json["type"],
       );
 
   Map<String, dynamic> toJson() => {
@@ -43,6 +40,5 @@ class RiderRegisterReq {
         "password": password,
         "picture": picture,
         "plate": plate,
-        "type": type,
       };
 }

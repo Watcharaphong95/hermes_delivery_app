@@ -6,8 +6,10 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
+import 'package:get_storage/get_storage.dart';
 import 'package:hermes_app/config/config.dart';
 import 'package:hermes_app/models/response/order_firebase_res.dart';
+import 'package:hermes_app/models/response/select_user_uid.dart';
 import 'package:hermes_app/models/response/user_search_res.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:http/http.dart' as http;
@@ -23,6 +25,8 @@ class SendItem extends StatefulWidget {
 }
 
 class _SendItemState extends State<SendItem> {
+  final box = GetStorage();
+
   String url = "";
   String pictureUrl = "";
 
@@ -45,6 +49,7 @@ class _SendItemState extends State<SendItem> {
   }
 
   TextEditingController itemDetails = TextEditingController();
+  TextEditingController itemName = TextEditingController();
 
   @override
   Widget build(BuildContext context) {
@@ -127,6 +132,39 @@ class _SendItemState extends State<SendItem> {
                                     ],
                                   ),
                           ],
+                        ),
+                      ),
+                    ),
+                    const Padding(
+                      padding: EdgeInsets.fromLTRB(0, 20, 0, 0),
+                      child: Text(
+                        'ชื่อพัสดุ',
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold, fontSize: 20),
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(0, 10, 0, 0),
+                      child: Container(
+                        width: screenWidth * 0.9,
+                        // height: screenHeight * 0.05,
+                        decoration: BoxDecoration(
+                            color: const Color(0xFFE6E1E1),
+                            borderRadius: BorderRadius.circular(11)),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 15, vertical: 10),
+                          child: SizedBox(
+                            child: TextField(
+                              controller: itemName,
+                              decoration: const InputDecoration(
+                                  border: InputBorder.none,
+                                  hintText: 'ชื่อพัสดุ',
+                                  hintStyle: TextStyle(
+                                      fontSize: 14,
+                                      color: Color.fromARGB(97, 0, 0, 0))),
+                            ),
+                          ),
                         ),
                       ),
                     ),
@@ -216,7 +254,6 @@ class _SendItemState extends State<SendItem> {
                             FilledButton(
                               onPressed: () {
                                 Get.back();
-                                // readData();
                               },
                               style: FilledButton.styleFrom(
                                   backgroundColor: const Color(0xFFBFBDBC)),
@@ -258,7 +295,7 @@ class _SendItemState extends State<SendItem> {
       url = config['apiEndPoint'];
     });
     log(url);
-    var res = await http.get(Uri.parse('$url/user/customer/$uidReceiver'));
+    var res = await http.get(Uri.parse('$url/user/$uidReceiver'));
     receiverData = phoneSearchResFromJson(res.body);
     log(receiverData[0].address);
     setState(() {});
@@ -331,11 +368,29 @@ class _SendItemState extends State<SendItem> {
     if (image == null) return;
     await imageUpload();
 
+    var res = await http.get(Uri.parse('$url/user/${receiverData[0].uid}'));
+    var receiver = selectUserUidFromJson(res.body);
+
+    res = await http.get(Uri.parse('$url/user/${box.read('uid')}'));
+    var sender = selectUserUidFromJson(res.body);
+
     var data = {
+      'item': itemName.text,
       'createAt': DateTime.now(),
       'receiverUid': receiverData[0].uid,
+      'receiverName': receiver.name,
+      'latReceiver': receiver.lat,
+      'lngReceiver': receiver.lng,
+      'senderId': box.read('uid'),
+      'senderName': sender.name,
+      'latSender': sender.lat,
+      'lngSender': sender.lng,
       'detail': itemDetails.text,
       'picture': pictureUrl,
+      'status': 1,
+      'riderRid': null,
+      'latRider': null,
+      'lngRider': null,
     };
 
     db
@@ -343,28 +398,6 @@ class _SendItemState extends State<SendItem> {
         .doc(DateTime.timestamp().millisecondsSinceEpoch.toString())
         .set(data);
   }
-
-  // void readData() async {
-  //   await initializeDateFormatting('th', null);
-  //   var result =
-  //       await db.collection('order').where('receiverUid', isEqualTo: 9).get();
-  //   // log(result.docs.length.toString());
-
-  //   List<OrderRes> orders = result.docs.map((doc) {
-  //     return OrderRes.fromFirestore(doc.data(), doc.id);
-  //   }).toList();
-
-  //   // Sort by time latest first
-  //   orders.sort((a, b) => b.createAt.compareTo(a.createAt));
-
-  //   for (OrderRes order in orders) {
-  //     log('Receiver UID: ${order.receiverUid}');
-  //     log('Detail: ${order.detail}');
-  //     log('Picture URL: ${order.picture}');
-  //     log('Formatted Date: ${order.formattedDate}');
-  //     log('Document ID: ${order.documentId}');
-  //   }
-  // }
 
   Future<void> imageUpload() async {
     log(image!.path);
