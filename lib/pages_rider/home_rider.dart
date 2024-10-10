@@ -9,6 +9,7 @@ import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:hermes_app/models/response/order_firebase_res.dart';
+import 'package:hermes_app/pages_rider/status_rider.dart';
 import 'package:hermes_app/pages_user/edit_profile_user.dart';
 import 'package:hermes_app/pages_user/status.dart';
 import 'package:intl/date_symbol_data_local.dart';
@@ -88,7 +89,7 @@ class _HomeRiderpageState extends State<HomeRiderpage> {
               padding: const EdgeInsets.fromLTRB(25, 0, 25, 20),
               child: SizedBox(
                 width: screenWidth,
-                height: screenHeight * 0.73,
+                height: screenHeight * 0.72,
                 child: ListView.builder(
                   itemCount: ordersReceive.length,
                   itemBuilder: (context, index) {
@@ -278,13 +279,20 @@ class _HomeRiderpageState extends State<HomeRiderpage> {
                 children: [
                   FilledButton(
                     onPressed: () {
-                      Navigator.of(context).pop(); // Closes the dialog
+                      Get.back(); // Closes the dialog
                     },
                     child: const Text('กลับ'),
                   ),
                   FilledButton(
-                    onPressed: () {
-                      Navigator.of(context).pop(); // Closes the dialog
+                    onPressed: () async {
+                      await db.collection('order').doc(item.documentId).update({
+                        'riderRid': box.read('uid'),
+                        'latRider': box.read('curLat'),
+                        'lngRider': box.read('curLng'),
+                        'status': 2
+                      });
+
+                      Get.to(() => StatusRider(docId: item.documentId));
                     },
                     child: const Text('รับงาน'),
                   ),
@@ -309,18 +317,6 @@ class _HomeRiderpageState extends State<HomeRiderpage> {
 
     // Sort by time latest first
     ordersReceive.sort((a, b) => b.createAt.compareTo(a.createAt));
-
-    // for (OrderRes order in ordersReceive) {
-    //   log('Item: ${order.item}');
-    //   log('Sender UID: ${order.senderId}');
-    //   log('Receiver UID: ${order.receiverUid}');
-    //   log('Detail: ${order.detail}');
-    //   log('Picture URL: ${order.picture}');
-    //   log('Status: ${order.status}');
-    //   log('Rider: ${order.riderUid}');
-    //   log('Formatted Date: ${order.formattedDate}');
-    //   log('Document ID: ${order.documentId}');
-    // }
 
     setState(() {});
   }

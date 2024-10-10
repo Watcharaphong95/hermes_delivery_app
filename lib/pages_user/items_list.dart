@@ -215,7 +215,9 @@ class _ListpageState extends State<ItemsList> {
                         padding: const EdgeInsets.only(bottom: 20),
                         child: GestureDetector(
                           onTap: () {
-                            Get.to(() => const Statuspage());
+                            Get.to(() => Statuspage(
+                                  docId: item.documentId,
+                                ));
                           },
                           child: Card(
                             color: const Color(0xFFE8E8E8),
