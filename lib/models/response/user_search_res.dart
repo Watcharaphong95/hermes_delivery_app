@@ -17,9 +17,11 @@ class PhoneSearchRes {
   String name;
   String password;
   String address;
+  dynamic plate;
   double lat;
   double lng;
   String picture;
+  int type;
 
   PhoneSearchRes({
     required this.uid,
@@ -27,9 +29,11 @@ class PhoneSearchRes {
     required this.name,
     required this.password,
     required this.address,
+    required this.plate,
     required this.lat,
     required this.lng,
     required this.picture,
+    required this.type,
   });
 
   factory PhoneSearchRes.fromJson(Map<String, dynamic> json) => PhoneSearchRes(
@@ -38,9 +42,11 @@ class PhoneSearchRes {
         name: json["name"],
         password: json["password"],
         address: json["address"],
+        plate: json["plate"],
         lat: json["lat"]?.toDouble(),
         lng: json["lng"]?.toDouble(),
         picture: json["picture"],
+        type: json["type"],
       );
 
   Map<String, dynamic> toJson() => {
@@ -49,8 +55,10 @@ class PhoneSearchRes {
         "name": name,
         "password": password,
         "address": address,
+        "plate": plate,
         "lat": lat,
         "lng": lng,
         "picture": picture,
+        "type": type,
       };
 }

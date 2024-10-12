@@ -12,18 +12,13 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:hermes_app/firebase_options.dart';
 import 'package:hermes_app/pages_user/login.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:intl/intl.dart'; // For date formatting
+import 'package:intl/intl.dart' as intl; // Use this to initialize locale
 
 main() async {
   WidgetsFlutterBinding
       .ensureInitialized(); // Ensures proper initialization for async code
-  CameraPosition initPosition;
-
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
-  FirebaseFirestore.instance.settings = const Settings(
-    persistenceEnabled: true,
-  );
+  await firebase();
 
   await GetStorage.init();
   final box = GetStorage();
@@ -33,6 +28,13 @@ main() async {
     AndroidGoogleMapsFlutter.useAndroidViewSurface = true;
   }
 
+  await permissionReq(box);
+
+  runApp(const MyApp());
+}
+
+Future<void> permissionReq(GetStorage box) async {
+  CameraPosition initPosition;
   // Request location permission from the user
   var status = await Permission.location.request();
 
@@ -54,10 +56,17 @@ main() async {
     log("Stored Longitude: $curLng");
   } else if (status.isDenied || status.isPermanentlyDenied) {
     // Handle the case where permission is denied
-    log('Location permission denied');
+    openAppSettings();
   }
+}
 
-  runApp(const MyApp());
+Future<void> firebase() async {
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+  FirebaseFirestore.instance.settings = const Settings(
+    persistenceEnabled: true,
+  );
 }
 
 class MyApp extends StatelessWidget {

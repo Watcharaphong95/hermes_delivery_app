@@ -1,8 +1,10 @@
 import 'dart:developer';
 
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:hermes_app/config/config.dart';
 import 'package:hermes_app/models/response/user_search_res.dart';
+import 'package:hermes_app/pages_user/send_item.dart';
 import 'package:http/http.dart' as http;
 
 class Homepage extends StatefulWidget {
@@ -112,40 +114,94 @@ class _HomepageState extends State<Homepage> {
                 ],
               ),
             ),
-            Column(
-              children: [
-                // Check if phoneGetResponse is not null and has items
-                // if (phoneGetResponse != null && phoneGetResponse.isNotEmpty)
-                // Expanded(
-                //   child: ListView(
-                //     children: phoneGetResponse
-                //         .map((phone) => Card(
-                //               child: Text(phone.name),
-                //             ))
-                //         .toList(),
-                //   ),
-                // )
-                // else
-                const SizedBox(
-                  height: 20, // Adjust space as needed
-                ),
-                const Text(
-                  "กรุณาค้นหาเบอร์",
-                  style: TextStyle(
-                    fontSize: 30,
-                    color: Color(0xFFBFBDBC),
-                    fontWeight: FontWeight.bold,
+            SizedBox(
+              height: screenHeight,
+              width: screenWidth * 0.9,
+              child: Column(
+                children: [
+                  // Check if phoneGetResponse is not null and has items
+                  if (phoneGetResponse.isNotEmpty)
+                    Expanded(
+                      child: ListView(
+                        children: phoneGetResponse
+                            .map((searchResult) => InkWell(
+                                  onTap: () {
+                                    Get.to(
+                                        () => SendItem(uid: searchResult.uid));
+                                  },
+                                  child: Card(
+                                    child: Row(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        const SizedBox(
+                                          width: 20,
+                                        ),
+                                        Container(
+                                          width: screenWidth * 0.15,
+                                          height: screenHeight * 0.1,
+                                          decoration: BoxDecoration(
+                                              shape: BoxShape.circle,
+                                              image: DecorationImage(
+                                                  image: NetworkImage(
+                                                      searchResult.picture),
+                                                  fit: BoxFit.cover)),
+                                        ),
+                                        const SizedBox(
+                                          width: 15,
+                                        ),
+                                        SizedBox(
+                                          height: screenHeight * 0.09,
+                                          child: Column(
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.center,
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                searchResult.phone,
+                                                style: const TextStyle(
+                                                    fontSize: 24,
+                                                    fontWeight:
+                                                        FontWeight.bold),
+                                              ),
+                                              Text(
+                                                searchResult.name,
+                                                style: const TextStyle(
+                                                    fontSize: 16),
+                                              ),
+                                            ],
+                                          ),
+                                        )
+                                      ],
+                                    ),
+                                  ),
+                                ))
+                            .toList(),
+                      ),
+                    )
+                  else
+                    const SizedBox(
+                      height: 20, // Adjust space as needed
+                    ),
+                  const Text(
+                    "กรุณาค้นหาเบอร์",
+                    style: TextStyle(
+                      fontSize: 30,
+                      color: Color(0xFFBFBDBC),
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
-                ),
-                const Text(
-                  "ผู้รับสินค้า",
-                  style: TextStyle(
-                    fontSize: 30,
-                    color: Color(0xFFBFBDBC),
-                    fontWeight: FontWeight.bold,
+                  const Text(
+                    "ผู้รับสินค้า",
+                    style: TextStyle(
+                      fontSize: 30,
+                      color: Color(0xFFBFBDBC),
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             )
           ],
         ),
@@ -162,7 +218,9 @@ class _HomepageState extends State<Homepage> {
 
   void buttonSearch() async {
     var phoneSearchText = phoneSearch.text;
-    var res = await http.get(Uri.parse('$url/user/search/$phoneSearchText'));
+    var res =
+        await http.get(Uri.parse('$url/user/customer/search/$phoneSearchText'));
+    log(res.body);
     phoneGetResponse = phoneSearchResFromJson(res.body);
     log(phoneGetResponse.length.toString());
     setState(() {});
