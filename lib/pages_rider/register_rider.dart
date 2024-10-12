@@ -297,7 +297,6 @@ class _RegisterRiderpageState extends State<RegisterRiderpage> {
       return; // Exit if validation fails
     }
 
-    int type = 2;
     if (phoneCtl.text.length == 10) {
       if (passwordCtl.text == confirmpasswordCtl.text) {
         RiderRegisterReq userRegisterReq = RiderRegisterReq(
@@ -306,12 +305,11 @@ class _RegisterRiderpageState extends State<RegisterRiderpage> {
           password: passwordCtl.text,
           picture: pictureUrl,
           plate: licenseplateCtl.text,
-          type: type.toString(),
         );
 
         try {
           final response = await http.post(
-            Uri.parse("$url/user/registerRider"),
+            Uri.parse("$url/rider/register"),
             headers: {"Content-Type": "application/json; charset=utf-8"},
             body: json.encode(userRegisterReq.toJson()),
           );

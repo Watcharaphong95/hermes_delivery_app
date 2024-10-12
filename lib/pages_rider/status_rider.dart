@@ -13,15 +13,15 @@ import 'package:hermes_app/models/response/order_firebase_res.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/date_symbol_data_local.dart';
 
-class Statuspage extends StatefulWidget {
+class StatusRider extends StatefulWidget {
   String docId = "";
-  Statuspage({super.key, required this.docId});
+  StatusRider({super.key, required this.docId});
 
   @override
-  State<Statuspage> createState() => _StatuspageState();
+  State<StatusRider> createState() => _StatuspageState();
 }
 
-class _StatuspageState extends State<Statuspage> {
+class _StatuspageState extends State<StatusRider> {
   final box = GetStorage();
   String apiKey = "";
   bool isLoadingMap = true;
@@ -30,6 +30,7 @@ class _StatuspageState extends State<Statuspage> {
 
   var db = FirebaseFirestore.instance;
   late StreamSubscription listener;
+  late Stream<Position> currentPosition;
 
   List<OrderRes> orders = [];
 
@@ -38,7 +39,7 @@ class _StatuspageState extends State<Statuspage> {
   late LatLng destination;
 
   CameraPosition initPosition = const CameraPosition(
-    target: LatLng(16.246671218679253, 103.25207957788868),
+    target: LatLng(0, 0),
     zoom: 15,
   );
 
@@ -46,6 +47,8 @@ class _StatuspageState extends State<Statuspage> {
   void initState() {
     super.initState();
     readData();
+    startLocationUpdates();
+    startRealtimeGet();
     log(widget.docId);
   }
 
@@ -54,110 +57,116 @@ class _StatuspageState extends State<Statuspage> {
     double screenWidth = MediaQuery.of(context).size.width;
     double screenHeight = MediaQuery.of(context).size.height;
 
-    return Scaffold(
-      body: SingleChildScrollView(
-        child: Stack(
-          children: [
-            Column(
-              children: [
-                Container(
-                  width: screenWidth,
-                  height: screenHeight * 0.35,
-                  decoration: const BoxDecoration(
-                    color: Color(0xFF2C262A),
-                    borderRadius: BorderRadius.only(
-                      bottomLeft: Radius.circular(18),
-                      bottomRight: Radius.circular(18),
+    return PopScope(
+      onPopInvoked: (didPop) async {
+        listener.cancel();
+      },
+      child: Scaffold(
+        body: SingleChildScrollView(
+          child: Stack(
+            children: [
+              Column(
+                children: [
+                  Container(
+                    width: screenWidth,
+                    height: screenHeight * 0.35,
+                    decoration: const BoxDecoration(
+                      color: Color(0xFF2C262A),
+                      borderRadius: BorderRadius.only(
+                        bottomLeft: Radius.circular(18),
+                        bottomRight: Radius.circular(18),
+                      ),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(20, 50, 20, 0),
+                          child: IconButton(
+                            icon: const Icon(
+                              Icons.arrow_back,
+                              color: Colors.white,
+                              size: 30,
+                            ),
+                            onPressed: () {
+                              Navigator.pop(context);
+                            },
+                          ),
+                        ),
+                        Center(
+                          child: Image.asset(
+                            'assets/images/Logo_status.png',
+                            width: screenWidth * 0.7,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(20, 50, 20, 0),
-                        child: IconButton(
-                          icon: const Icon(
-                            Icons.arrow_back,
-                            color: Colors.white,
-                            size: 30,
-                          ),
-                          onPressed: () {
-                            Navigator.pop(context);
-                          },
-                        ),
-                      ),
-                      Center(
-                        child: Image.asset(
-                          'assets/images/Logo_status.png',
-                          width: screenWidth * 0.7,
-                        ),
-                      ),
-                    ],
+                ],
+              ),
+              Padding(
+                padding: EdgeInsets.fromLTRB(
+                  screenWidth * 0.045,
+                  screenHeight * 0.28,
+                  screenWidth * 0.045,
+                  0,
+                ),
+                child: Container(
+                  width: screenWidth,
+                  height: screenHeight * 0.7,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFE8E8E8),
+                    borderRadius: BorderRadius.circular(18),
                   ),
                 ),
-              ],
-            ),
-            Padding(
-              padding: EdgeInsets.fromLTRB(
-                screenWidth * 0.045,
-                screenHeight * 0.28,
-                screenWidth * 0.045,
-                0,
               ),
-              child: Container(
-                width: screenWidth,
-                height: screenHeight * 0.7,
-                decoration: BoxDecoration(
-                  color: const Color(0xFFE8E8E8),
-                  borderRadius: BorderRadius.circular(18),
+              if (isLoadingMap)
+                const Center(child: CircularProgressIndicator()),
+              Positioned(
+                top: screenHeight * 0.3,
+                left: (screenWidth * 0.5) - (screenWidth * 0.8 / 2),
+                child: SizedBox(
+                  width: screenWidth * 0.8,
+                  height: screenHeight * 0.25,
+                  child: GoogleMap(
+                    mapType: MapType.normal,
+                    initialCameraPosition: initPosition,
+                    myLocationEnabled: false,
+                    markers: _markers,
+                    onMapCreated: (GoogleMapController controller) {
+                      mapController = controller;
+                      _fitAllMarkers(); // Fit all markers when the map is created
+                    },
+                    zoomGesturesEnabled: true,
+                    scrollGesturesEnabled: true,
+                    zoomControlsEnabled: false,
+                    myLocationButtonEnabled: false,
+                  ),
                 ),
               ),
-            ),
-            if (isLoadingMap) const Center(child: CircularProgressIndicator()),
-            Positioned(
-              top: screenHeight * 0.3,
-              left: (screenWidth * 0.5) - (screenWidth * 0.8 / 2),
-              child: SizedBox(
-                width: screenWidth * 0.8,
-                height: screenHeight * 0.25,
-                child: GoogleMap(
-                  mapType: MapType.normal,
-                  initialCameraPosition: initPosition,
-                  myLocationEnabled: false,
-                  markers: _markers,
-                  onMapCreated: (GoogleMapController controller) {
-                    mapController = controller;
-                    _fitAllMarkers(); // Fit all markers when the map is created
-                  },
-                  zoomGesturesEnabled: true,
-                  scrollGesturesEnabled: true,
-                  zoomControlsEnabled: false,
-                  myLocationButtonEnabled: false,
+              Padding(
+                padding: EdgeInsets.fromLTRB(
+                  screenWidth * 0.1,
+                  screenHeight * 0.31,
+                  screenWidth * 0.1,
+                  0,
                 ),
               ),
-            ),
-            Padding(
-              padding: EdgeInsets.fromLTRB(
-                screenWidth * 0.1,
-                screenHeight * 0.31,
-                screenWidth * 0.1,
-                0,
+              Padding(
+                padding: EdgeInsets.fromLTRB(
+                  screenWidth * 0.07,
+                  screenHeight * 0.54,
+                  screenWidth * 0.1,
+                  0,
+                ),
+                child: const Text("สถานะการจัดส่ง",
+                    style: TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.bold,
+                    )),
               ),
-            ),
-            Padding(
-              padding: EdgeInsets.fromLTRB(
-                screenWidth * 0.07,
-                screenHeight * 0.54,
-                screenWidth * 0.1,
-                0,
-              ),
-              child: const Text("สถานะการจัดส่ง",
-                  style: TextStyle(
-                    fontSize: 17,
-                    fontWeight: FontWeight.bold,
-                  )),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -172,6 +181,7 @@ class _StatuspageState extends State<Statuspage> {
   }
 
   void readData() async {
+    origins.clear();
     await initializeDateFormatting('th', null);
     var result = await db.collection('order').doc(widget.docId).get();
 
@@ -183,9 +193,10 @@ class _StatuspageState extends State<Statuspage> {
     for (var order in orders) {
       origins.add(LatLng(order.latRider!, order.lngRider!));
     }
-
     setupMarkers();
-    setState(() {});
+    setState(() {
+      initPosition = CameraPosition(target: destination);
+    });
   }
 
   Future<void> setupMarkers() async {
@@ -301,5 +312,33 @@ class _StatuspageState extends State<Statuspage> {
     final ByteData data = await rootBundle.load('assets/images/rider.png');
     final Uint8List bytes = data.buffer.asUint8List();
     return BitmapDescriptor.fromBytes(bytes);
+  }
+
+  void startLocationUpdates() {
+    LocationSettings locationSettings = const LocationSettings(
+      accuracy: LocationAccuracy.high,
+      distanceFilter: 10,
+    );
+
+    currentPosition =
+        Geolocator.getPositionStream(locationSettings: locationSettings);
+    currentPosition.listen((Position position) async {
+      LatLng currentLocation = LatLng(position.latitude, position.longitude);
+      await db.collection('order').doc(widget.docId).update({
+        'latRider': position.latitude,
+        'lngRider': position.longitude,
+      });
+      log('Current Location: $currentLocation');
+    });
+    setState(() {});
+  }
+
+  void startRealtimeGet() {
+    final docRef = db.collection("order");
+    docRef.snapshots().listen((event) {
+      setState(() {
+        readData();
+      });
+    }, onError: (error) => log("Listen failed"));
   }
 }

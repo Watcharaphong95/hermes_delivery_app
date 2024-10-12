@@ -218,8 +218,7 @@ class _HomepageState extends State<Homepage> {
 
   void buttonSearch() async {
     var phoneSearchText = phoneSearch.text;
-    var res =
-        await http.get(Uri.parse('$url/user/customer/search/$phoneSearchText'));
+    var res = await http.get(Uri.parse('$url/user/search/$phoneSearchText'));
     log(res.body);
     phoneGetResponse = phoneSearchResFromJson(res.body);
     log(phoneGetResponse.length.toString());

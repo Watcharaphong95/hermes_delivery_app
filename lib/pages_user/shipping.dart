@@ -3,7 +3,7 @@ import 'dart:io';
 import 'package:dotted_border/dotted_border.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:hermes_app/navbar/navbuttom.dart';
+import 'package:hermes_app/navbar/navbuttomUser.dart';
 import 'package:image_picker/image_picker.dart';
 
 class Shippingpage extends StatefulWidget {
@@ -221,7 +221,7 @@ class _ShippingpageState extends State<Shippingpage> {
                           padding: const EdgeInsets.only(left: 8.0),
                           child: ElevatedButton(
                             onPressed: () {
-                              Get.to(() => Navbuttompage(
+                              Get.to(() => NavbuttompageUser(
                                     selectedPage: 0,
                                     phoneNumber: '',
                                   ));

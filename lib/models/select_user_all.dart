@@ -1,58 +1,46 @@
 import 'dart:convert';
 
-SelectUserAll selectUserAllFromJson(String str) =>
-    SelectUserAll.fromJson(json.decode(str));
+// Function to parse JSON data
+SelectUserAll selectUserAllFromJson(String str) {
+  final List<dynamic> jsonData = json.decode(str);
+  return SelectUserAll.fromJson(
+      jsonData[0]); // Parse the first element of the list
+}
 
+// Function to convert SelectUserAll object back to JSON
 String selectUserAllToJson(SelectUserAll data) => json.encode(data.toJson());
 
+// The SelectUserAll class definition
 class SelectUserAll {
-  int uid;
+  int? uid; // Make uid nullable
+  dynamic rid; // Keep rid as dynamic
   String phone;
-  String name;
-  String password;
-  String? address;
-  String? plate;
-  double? lat;
-  double? lng;
-  String picture;
+  String password; // Consider removing if not needed
   int type;
 
   SelectUserAll({
-    required this.uid,
+    this.uid, // Allow uid to be null
+    this.rid, // Allow rid to be null
     required this.phone,
-    required this.name,
     required this.password,
-    this.address,
-    this.plate,
-    this.lat,
-    this.lng,
-    required this.picture,
     required this.type,
   });
 
+  // Factory method to create an instance from JSON
   factory SelectUserAll.fromJson(Map<String, dynamic> json) => SelectUserAll(
-        uid: json["uid"],
+        uid: json["uid"] == null ? null : json["uid"] as int, // Check for null
+        rid: json["rid"], // Keep as dynamic, will handle null naturally
         phone: json["phone"],
-        name: json["name"],
         password: json["password"],
-        address: json["address"],
-        plate: json["plate"],
-        lat: json["lat"] == null ? null : json["lat"].toDouble(),
-        lng: json["lng"] == null ? null : json["lng"].toDouble(),
-        picture: json["picture"],
         type: json["type"],
       );
 
+  // Convert the SelectUserAll instance back to JSON
   Map<String, dynamic> toJson() => {
         "uid": uid,
+        "rid": rid,
         "phone": phone,
-        "name": name,
         "password": password,
-        "address": address,
-        "plate": plate,
-        "lat": lat,
-        "lng": lng,
-        "picture": picture,
         "type": type,
       };
 }
