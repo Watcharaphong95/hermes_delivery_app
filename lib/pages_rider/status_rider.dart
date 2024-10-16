@@ -39,6 +39,8 @@ class _StatuspageState extends State<StatusRider> {
   late LatLng destination;
   late LatLng pickup;
 
+  int distanceDestination = 0;
+
   CameraPosition initPosition = const CameraPosition(
     target: LatLng(0, 0),
     zoom: 15,
@@ -163,12 +165,13 @@ class _StatuspageState extends State<StatusRider> {
                   screenWidth * 0.1,
                   0,
                 ),
-                child: const Text("สถานะการจัดส่ง",
-                    style: TextStyle(
+                child: Text(distanceDestination.toString(),
+                    style: const TextStyle(
                       fontSize: 17,
                       fontWeight: FontWeight.bold,
                     )),
               ),
+              Text(distanceDestination.toString()),
             ],
           ),
         ),
@@ -201,6 +204,13 @@ class _StatuspageState extends State<StatusRider> {
     }
     setupMarkers();
     setState(() {
+      distanceDestination = Geolocator.distanceBetween(
+        orders[0].latRider!,
+        orders[0].lngRider!,
+        destination.latitude,
+        destination.longitude,
+      ).round();
+      log(distanceDestination.toString());
       initPosition = CameraPosition(target: destination);
     });
   }
@@ -307,7 +317,7 @@ class _StatuspageState extends State<StatusRider> {
   Future<void> _fitAllMarkers() async {
     // Check if the map controller is initialized
     if (mapController == null) {
-      print("Map controller is not initialized.");
+      log("Map controller is not initialized.");
       return;
     }
 
@@ -342,10 +352,10 @@ class _StatuspageState extends State<StatusRider> {
         await mapController.animateCamera(
             CameraUpdate.newLatLngBounds(bounds, 50)); // Increase padding
       } catch (e) {
-        print('Error animating camera: $e');
+        log('Error animating camera: $e');
       }
     } else {
-      print('No markers to fit.');
+      log('No markers to fit.');
     }
   }
 
