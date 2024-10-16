@@ -130,6 +130,7 @@ class _HomepageState extends State<Homepage> {
                                         () => SendItem(uid: searchResult.uid));
                                   },
                                   child: Card(
+                                    color: const Color(0xFFE8E8E8),
                                     child: Row(
                                       crossAxisAlignment:
                                           CrossAxisAlignment.start,

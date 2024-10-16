@@ -1,4 +1,8 @@
+import 'dart:developer';
+
 import 'package:flutter/material.dart';
+import 'package:hermes_app/config/config.dart';
+import 'package:http/http.dart' as http;
 
 class ProfileRider extends StatefulWidget {
   const ProfileRider({super.key});
@@ -8,6 +12,8 @@ class ProfileRider extends StatefulWidget {
 }
 
 class _ProfileRiderState extends State<ProfileRider> {
+  String url = " ";
+
   @override
   Widget build(BuildContext context) {
     double screenWidth = MediaQuery.of(context).size.width;
