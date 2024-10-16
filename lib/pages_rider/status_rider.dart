@@ -34,9 +34,10 @@ class _StatuspageState extends State<StatusRider> {
 
   List<OrderRes> orders = [];
 
-  List<LatLng> origins = [];
+  List<LatLng> riders = [];
 
   late LatLng destination;
+  late LatLng pickup;
 
   CameraPosition initPosition = const CameraPosition(
     target: LatLng(0, 0),
@@ -90,6 +91,7 @@ class _StatuspageState extends State<StatusRider> {
                             ),
                             onPressed: () {
                               Navigator.pop(context);
+                              Navigator.pop(context);
                             },
                           ),
                         ),
@@ -135,11 +137,13 @@ class _StatuspageState extends State<StatusRider> {
                     markers: _markers,
                     onMapCreated: (GoogleMapController controller) {
                       mapController = controller;
-                      _fitAllMarkers(); // Fit all markers when the map is created
+                      Future.delayed(const Duration(milliseconds: 200), () {
+                        _fitAllMarkers();
+                      });
                     },
                     zoomGesturesEnabled: true,
                     scrollGesturesEnabled: true,
-                    zoomControlsEnabled: false,
+                    zoomControlsEnabled: true,
                     myLocationButtonEnabled: false,
                   ),
                 ),
@@ -181,7 +185,7 @@ class _StatuspageState extends State<StatusRider> {
   }
 
   void readData() async {
-    origins.clear();
+    riders.clear();
     await initializeDateFormatting('th', null);
     var result = await db.collection('order').doc(widget.docId).get();
 
@@ -189,9 +193,11 @@ class _StatuspageState extends State<StatusRider> {
 
     orders.sort((a, b) => b.createAt.compareTo(a.createAt));
 
+    pickup = LatLng(orders[0].latSender!, orders[0].lngSender!);
     destination = LatLng(orders[0].latReceiver!, orders[0].lngReceiver!);
+
     for (var order in orders) {
-      origins.add(LatLng(order.latRider!, order.lngRider!));
+      riders.add(LatLng(order.latRider!, order.lngRider!));
     }
     setupMarkers();
     setState(() {
@@ -215,10 +221,16 @@ class _StatuspageState extends State<StatusRider> {
       _markers.clear();
     });
 
-    for (int index = 0; index < origins.length; index++) {
-      LatLng origin = origins[index];
-      String url =
-          "https://maps.googleapis.com/maps/api/directions/json?origin=${origin.latitude},${origin.longitude}&destination=${destination.latitude},${destination.longitude}&mode=driving&key=$apiKey";
+    for (int index = 0; index < riders.length; index++) {
+      LatLng rider = riders[index];
+      String url = '';
+      if (orders[0].status == 2.toString()) {
+        url =
+            "https://maps.googleapis.com/maps/api/directions/json?origin=${destination.latitude},${destination.longitude}&destination=${rider.latitude},${rider.longitude}&mode=driving&key=$apiKey";
+      } else if (orders[0].status == 3.toString()) {
+        url =
+            "https://maps.googleapis.com/maps/api/directions/json?origin=${rider.latitude},${rider.longitude}&destination=${destination.latitude},${destination.longitude}&mode=driving&key=$apiKey";
+      }
 
       final response = await http.get(Uri.parse(url));
 
@@ -226,7 +238,7 @@ class _StatuspageState extends State<StatusRider> {
         var jsonResponse = jsonDecode(response.body);
 
         if (jsonResponse['routes'].isEmpty) {
-          log("No routes found in the API response for origin: $origin");
+          log("No routes found in the API response for origin: $rider");
           continue;
         }
 
@@ -234,41 +246,58 @@ class _StatuspageState extends State<StatusRider> {
         var distance = leg['distance']['text'];
         var duration = leg['duration']['text'];
 
-        log("Distance from $origin to destination: $distance");
-        log("Duration from $origin to destination: $duration");
+        log("Distance from $rider to destination: $distance");
+        log("Duration from $rider to destination: $duration");
 
-        await _addOriginMarker(
-            origin, distance, duration, 'Rider ${index + 1}');
+        if (orders[0].status == 2.toString()) {
+          _addDestinationMarker(distance, duration);
+        } else if (orders[0].status == 3.toString()) {
+          _addPickUpMarker(distance, duration);
+        }
+
+        await _addRiderMarker(rider);
       } else {
-        log("Failed to load directions for origin: $origin - ${response.reasonPhrase}");
+        log("Failed to load directions for origin: $rider - ${response.reasonPhrase}");
       }
     }
-
-    _addDestinationMarker();
     _fitAllMarkers();
   }
 
-  void _addDestinationMarker() {
+  void _addDestinationMarker(String distance, String duration) {
+    _markers.clear;
     setState(() {
       _markers.add(Marker(
         markerId: const MarkerId('destination'),
         position: destination,
-        infoWindow: const InfoWindow(title: 'Destination'),
+        infoWindow:
+            InfoWindow(title: 'Destination', snippet: '$distance $duration'),
         icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
       ));
     });
   }
 
-  Future<void> _addOriginMarker(LatLng origin, String distance, String duration,
-      String riderLabel) async {
+  void _addPickUpMarker(String distance, String duration) {
+    _markers.clear;
+    setState(() {
+      _markers.add(Marker(
+        markerId: const MarkerId('pickup'),
+        position: pickup,
+        infoWindow: InfoWindow(title: 'Pickup', snippet: '$distance $duration'),
+        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
+      ));
+    });
+  }
+
+  Future<void> _addRiderMarker(LatLng rider) async {
+    _markers.clear;
     BitmapDescriptor riderIcon = await _loadRiderIcon();
 
     setState(() {
       _markers.add(Marker(
-        markerId: MarkerId('origin_${origin.latitude}_${origin.longitude}'),
-        position: origin,
-        infoWindow: InfoWindow(
-          title: '$riderLabel Distance: $distance Duration: $duration',
+        markerId: const MarkerId('you'),
+        position: rider,
+        infoWindow: const InfoWindow(
+          title: 'You',
         ),
         icon: riderIcon,
       ));
@@ -276,6 +305,12 @@ class _StatuspageState extends State<StatusRider> {
   }
 
   Future<void> _fitAllMarkers() async {
+    // Check if the map controller is initialized
+    if (mapController == null) {
+      print("Map controller is not initialized.");
+      return;
+    }
+
     if (_markers.isNotEmpty) {
       LatLngBounds bounds;
 
@@ -303,8 +338,14 @@ class _StatuspageState extends State<StatusRider> {
         );
       }
 
-      await mapController
-          .animateCamera(CameraUpdate.newLatLngBounds(bounds, 50));
+      try {
+        await mapController.animateCamera(
+            CameraUpdate.newLatLngBounds(bounds, 50)); // Increase padding
+      } catch (e) {
+        print('Error animating camera: $e');
+      }
+    } else {
+      print('No markers to fit.');
     }
   }
 

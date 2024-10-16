@@ -282,7 +282,8 @@ class _LoginPageState extends State<LoginPage> {
         log('Error during login: $error');
         // แสดงข้อความแจ้งเตือนเมื่อเกิดข้อผิดพลาด
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $error')),
+          const SnackBar(
+              content: Center(child: Text('Invalid phone or password'))),
         );
       }
     } else {

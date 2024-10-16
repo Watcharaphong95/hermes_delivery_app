@@ -32,7 +32,6 @@ class _HomeRiderpageState extends State<HomeRiderpage> {
 
   List<OrderRes> ordersReceive = [];
 
-  bool isLoadingMap = true;
   late CameraPosition initPosition;
 
   Set<Marker> _markers = {};
@@ -87,108 +86,125 @@ class _HomeRiderpageState extends State<HomeRiderpage> {
             ),
             Padding(
               padding: const EdgeInsets.fromLTRB(25, 0, 25, 20),
-              child: SizedBox(
-                width: screenWidth,
-                height: screenHeight * 0.72,
-                child: ListView.builder(
-                  itemCount: ordersReceive.length,
-                  itemBuilder: (context, index) {
-                    final item = ordersReceive[index];
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 20),
-                      child: GestureDetector(
-                        onTap: () => tapOnOrderCard(item),
-                        child: Card(
-                          color: const Color(0xFFE8E8E8),
-                          child: Padding(
-                            padding: const EdgeInsets.fromLTRB(20, 10, 0, 10),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text(
-                                  'รับได้',
-                                  style: TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.lightGreen),
-                                ),
-                                Padding(
-                                  padding: const EdgeInsets.only(top: 10),
-                                  child: Row(
+              child: ordersReceive.isNotEmpty
+                  ? SizedBox(
+                      width: screenWidth,
+                      height: screenHeight * 0.72,
+                      child: ListView.builder(
+                        itemCount: ordersReceive.length,
+                        itemBuilder: (context, index) {
+                          final item = ordersReceive[index];
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 20),
+                            child: GestureDetector(
+                              onTap: () => tapOnOrderCard(item),
+                              child: Card(
+                                color: const Color(0xFFE8E8E8),
+                                child: Padding(
+                                  padding:
+                                      const EdgeInsets.fromLTRB(20, 10, 0, 10),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       const Text(
-                                        'สินค้า : ',
+                                        'รับได้',
                                         style: TextStyle(
-                                          fontSize: 14,
-                                          color: Colors.black,
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.bold,
+                                            color: Colors.lightGreen),
+                                      ),
+                                      Padding(
+                                        padding: const EdgeInsets.only(top: 10),
+                                        child: Row(
+                                          children: [
+                                            const Text(
+                                              'สินค้า : ',
+                                              style: TextStyle(
+                                                fontSize: 14,
+                                                color: Colors.black,
+                                              ),
+                                            ),
+                                            Text(
+                                              item.item ?? '',
+                                              style: const TextStyle(
+                                                fontSize: 15,
+                                                color: Colors.black,
+                                              ),
+                                            ),
+                                          ],
                                         ),
                                       ),
-                                      Text(
-                                        item.item ?? '',
-                                        style: const TextStyle(
-                                          fontSize: 15,
-                                          color: Colors.black,
+                                      Padding(
+                                        padding: const EdgeInsets.only(top: 0),
+                                        child: Row(
+                                          children: [
+                                            const Text(
+                                              'ผู้ส่ง : ',
+                                              style: TextStyle(
+                                                fontSize: 14,
+                                                color: Colors.black,
+                                              ),
+                                            ),
+                                            Text(
+                                              item.senderName ?? '',
+                                              style: const TextStyle(
+                                                fontSize: 15,
+                                                color: Colors.black,
+                                              ),
+                                            ),
+                                            const SizedBox(width: 50),
+                                            const Text(
+                                              'ผู้รับ : ',
+                                              style: TextStyle(
+                                                fontSize: 14,
+                                                color: Colors.black,
+                                              ),
+                                            ),
+                                            Text(
+                                              item.receiverName ?? '',
+                                              style: const TextStyle(
+                                                fontSize: 15,
+                                                color: Colors.black,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      Padding(
+                                        padding: const EdgeInsets.only(top: 15),
+                                        child: Text(
+                                          item.createAt.toString() ?? '',
+                                          style: const TextStyle(
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.bold,
+                                            color: Color(0xFFBFBDBC),
+                                          ),
                                         ),
                                       ),
                                     ],
                                   ),
                                 ),
-                                Padding(
-                                  padding: const EdgeInsets.only(top: 0),
-                                  child: Row(
-                                    children: [
-                                      const Text(
-                                        'ผู้ส่ง : ',
-                                        style: TextStyle(
-                                          fontSize: 14,
-                                          color: Colors.black,
-                                        ),
-                                      ),
-                                      Text(
-                                        item.senderName ?? '',
-                                        style: const TextStyle(
-                                          fontSize: 15,
-                                          color: Colors.black,
-                                        ),
-                                      ),
-                                      const SizedBox(width: 50),
-                                      const Text(
-                                        'ผู้รับ : ',
-                                        style: TextStyle(
-                                          fontSize: 14,
-                                          color: Colors.black,
-                                        ),
-                                      ),
-                                      Text(
-                                        item.receiverName ?? '',
-                                        style: const TextStyle(
-                                          fontSize: 15,
-                                          color: Colors.black,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                Padding(
-                                  padding: const EdgeInsets.only(top: 15),
-                                  child: Text(
-                                    item.createAt.toString() ?? '',
-                                    style: const TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.bold,
-                                      color: Color(0xFFBFBDBC),
-                                    ),
-                                  ),
-                                ),
-                              ],
+                              ),
                             ),
+                          );
+                        },
+                      ),
+                    )
+                  : const Center(
+                      child: Padding(
+                        padding: EdgeInsets.only(top: 20),
+                        child: Text(
+                          "กรุณาค้นหาเบอร์\nผู้รับสินค้า",
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 30,
+                            color: Color(0xFFBFBDBC),
+                            fontWeight: FontWeight.bold,
                           ),
                         ),
                       ),
-                    );
-                  },
-                ),
-              ),
+                    ),
             ),
           ],
         ),
@@ -243,7 +259,9 @@ class _HomeRiderpageState extends State<HomeRiderpage> {
                       markers: _markers,
                       onMapCreated: (GoogleMapController controller) {
                         mapController = controller;
-                        _fitAllMarkers(); // Fit all markers when the map is created
+                        Future.delayed(const Duration(milliseconds: 200), () {
+                          _fitAllMarkers();
+                        }); // Fit all markers when the map is created
                       },
                       zoomGesturesEnabled: true, // Disable zoom gestures
                       scrollGesturesEnabled: true,
@@ -331,31 +349,47 @@ class _HomeRiderpageState extends State<HomeRiderpage> {
   }
 
   Future<void> _fitAllMarkers() async {
-    if (_markers.isNotEmpty) {
-      // Initialize min and max lat/lng for the bounds calculation
-      double minLat = _markers.first.position.latitude;
-      double minLng = _markers.first.position.longitude;
-      double maxLat = _markers.first.position.latitude;
-      double maxLng = _markers.first.position.longitude;
+    // Check if the map controller is initialized
+    if (mapController == null) {
+      print("Map controller is not initialized.");
+      return;
+    }
 
-      // Loop through all markers to find the bounds
-      for (var marker in _markers) {
-        minLat = min(minLat, marker.position.latitude);
-        minLng = min(minLng, marker.position.longitude);
-        maxLat = max(maxLat, marker.position.latitude);
-        maxLng = max(maxLng, marker.position.longitude);
+    if (_markers.isNotEmpty) {
+      LatLngBounds bounds;
+
+      if (_markers.length == 1) {
+        bounds = LatLngBounds(
+          southwest: _markers.first.position,
+          northeast: _markers.first.position,
+        );
+      } else {
+        double minLat = _markers.first.position.latitude;
+        double minLng = _markers.first.position.longitude;
+        double maxLat = _markers.first.position.latitude;
+        double maxLng = _markers.first.position.longitude;
+
+        for (var marker in _markers) {
+          minLat = min(minLat, marker.position.latitude);
+          minLng = min(minLng, marker.position.longitude);
+          maxLat = max(maxLat, marker.position.latitude);
+          maxLng = max(maxLng, marker.position.longitude);
+        }
+
+        bounds = LatLngBounds(
+          southwest: LatLng(minLat, minLng),
+          northeast: LatLng(maxLat, maxLng),
+        );
       }
 
-      // Create the bounds based on the calculated min/max latitude and longitude
-      LatLngBounds bounds = LatLngBounds(
-        southwest: LatLng(minLat, minLng),
-        northeast: LatLng(maxLat, maxLng),
-      );
-
-      // Animate the camera to fit all markers with adjusted padding
-      await mapController.animateCamera(
-        CameraUpdate.newLatLngBounds(bounds, 50), // Use padding as needed
-      );
+      try {
+        await mapController.animateCamera(
+            CameraUpdate.newLatLngBounds(bounds, 50)); // Increase padding
+      } catch (e) {
+        print('Error animating camera: $e');
+      }
+    } else {
+      print('No markers to fit.');
     }
   }
 }
