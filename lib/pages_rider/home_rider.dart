@@ -341,6 +341,18 @@ class _HomeRiderpageState extends State<HomeRiderpage> {
 
   void readData() async {
     await initializeDateFormatting('th', null);
+
+    var check = await db
+        .collection("order")
+        .where('riderRid', isEqualTo: box.read('uid'))
+        .get();
+    if (check.docs.isNotEmpty) {
+      ordersReceive = check.docs.map((doc) {
+        return OrderRes.fromFirestore(doc.data(), doc.id);
+      }).toList();
+      Get.to(() => StatusRider(docId: ordersReceive[0].documentId));
+    }
+
     var result =
         await db.collection('order').where('status', isEqualTo: 1).get();
     // log(result.docs.length.toString());
@@ -386,7 +398,17 @@ class _HomeRiderpageState extends State<HomeRiderpage> {
     ));
   }
 
-  void startRealtimeGet() {
+  void startCheckOrder() {
+    final docRef =
+        db.collection("order").where('riderRid', isEqualTo: box.read('uid'));
+    docRef.snapshots().listen((event) {
+      setState(() {
+        readData();
+      });
+    }, onError: (error) => log("Listen failed"));
+  }
+
+  Future<void> startRealtimeGet() async {
     final docRef = db.collection("order");
     docRef.snapshots().listen((event) {
       setState(() {

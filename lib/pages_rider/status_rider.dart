@@ -65,9 +65,7 @@ class _StatuspageState extends State<StatusRider> {
     double screenHeight = MediaQuery.of(context).size.height;
 
     return PopScope(
-      onPopInvoked: (didPop) async {
-        listener.cancel();
-      },
+      canPop: false,
       child: Scaffold(
         body: SingleChildScrollView(
           child: Stack(
@@ -88,22 +86,12 @@ class _StatuspageState extends State<StatusRider> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Padding(
-                          padding: const EdgeInsets.fromLTRB(20, 50, 20, 0),
-                          child: IconButton(
-                            icon: const Icon(
-                              Icons.arrow_back,
-                              color: Colors.white,
-                              size: 30,
+                          padding: const EdgeInsets.fromLTRB(20, 80, 20, 0),
+                          child: Center(
+                            child: Image.asset(
+                              'assets/images/Logo_status.png',
+                              width: screenWidth * 0.7,
                             ),
-                            onPressed: () {
-                              Navigator.pop(context);
-                            },
-                          ),
-                        ),
-                        Center(
-                          child: Image.asset(
-                            'assets/images/Logo_status.png',
-                            width: screenWidth * 0.7,
                           ),
                         ),
                       ],
@@ -165,7 +153,7 @@ class _StatuspageState extends State<StatusRider> {
               Padding(
                 padding: EdgeInsets.fromLTRB(
                   screenWidth * 0.07,
-                  screenHeight * 0.54,
+                  screenHeight * 0.55,
                   screenWidth * 0.1,
                   0,
                 ),
@@ -175,7 +163,6 @@ class _StatuspageState extends State<StatusRider> {
                       fontWeight: FontWeight.bold,
                     )),
               ),
-              Text(distanceDestination.toString()),
             ],
           ),
         ),
@@ -424,7 +411,7 @@ class _StatuspageState extends State<StatusRider> {
   }
 
   void startRealtimeGet() {
-    final docRef = db.collection("order");
+    final docRef = db.collection("order").doc(widget.docId);
     docRef.snapshots().listen((event) {
       setState(() {
         readData();
