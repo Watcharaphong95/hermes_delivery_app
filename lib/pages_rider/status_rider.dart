@@ -5,6 +5,7 @@ import 'dart:math' hide log;
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_polyline_points/flutter_polyline_points.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
@@ -23,10 +24,12 @@ class StatusRider extends StatefulWidget {
 
 class _StatuspageState extends State<StatusRider> {
   final box = GetStorage();
+  PolylinePoints polylinePoints = PolylinePoints();
   String apiKey = "";
   bool isLoadingMap = true;
   late GoogleMapController mapController;
   Set<Marker> _markers = {};
+  final Set<Polyline> _polylines = {};
 
   var db = FirebaseFirestore.instance;
   late StreamSubscription listener;
@@ -40,6 +43,7 @@ class _StatuspageState extends State<StatusRider> {
   late LatLng pickup;
 
   int distanceDestination = 0;
+  bool distanceAccpet = false;
 
   CameraPosition initPosition = const CameraPosition(
     target: LatLng(0, 0),
@@ -93,7 +97,6 @@ class _StatuspageState extends State<StatusRider> {
                             ),
                             onPressed: () {
                               Navigator.pop(context);
-                              Navigator.pop(context);
                             },
                           ),
                         ),
@@ -137,6 +140,7 @@ class _StatuspageState extends State<StatusRider> {
                     initialCameraPosition: initPosition,
                     myLocationEnabled: false,
                     markers: _markers,
+                    polylines: _polylines,
                     onMapCreated: (GoogleMapController controller) {
                       mapController = controller;
                       Future.delayed(const Duration(milliseconds: 200), () {
@@ -210,6 +214,9 @@ class _StatuspageState extends State<StatusRider> {
         destination.latitude,
         destination.longitude,
       ).round();
+      if (distanceDestination < 20) {
+        distanceAccpet = true;
+      }
       log(distanceDestination.toString());
       initPosition = CameraPosition(target: destination);
     });
@@ -220,7 +227,7 @@ class _StatuspageState extends State<StatusRider> {
       isLoadingMap = true;
     });
     await getApiKey();
-    _getMarkers();
+    await _getMarkers();
     setState(() {
       isLoadingMap = false;
     });
@@ -229,15 +236,16 @@ class _StatuspageState extends State<StatusRider> {
   Future<void> _getMarkers() async {
     setState(() {
       _markers.clear();
+      _polylines.clear();
     });
 
     for (int index = 0; index < riders.length; index++) {
       LatLng rider = riders[index];
       String url = '';
-      if (orders[0].status == 2.toString()) {
+      if (orders[0].status == '2') {
         url =
             "https://maps.googleapis.com/maps/api/directions/json?origin=${destination.latitude},${destination.longitude}&destination=${rider.latitude},${rider.longitude}&mode=driving&key=$apiKey";
-      } else if (orders[0].status == 3.toString()) {
+      } else if (orders[0].status == '3') {
         url =
             "https://maps.googleapis.com/maps/api/directions/json?origin=${rider.latitude},${rider.longitude}&destination=${destination.latitude},${destination.longitude}&mode=driving&key=$apiKey";
       }
@@ -259,13 +267,44 @@ class _StatuspageState extends State<StatusRider> {
         log("Distance from $rider to destination: $distance");
         log("Duration from $rider to destination: $duration");
 
-        if (orders[0].status == 2.toString()) {
-          _addDestinationMarker(distance, duration);
-        } else if (orders[0].status == 3.toString()) {
-          _addPickUpMarker(distance, duration);
+        _addDestinationMarker(distance, duration);
+        _addPickUpMarker(distance, duration);
+        await _addRiderMarker(rider);
+
+        List<LatLng> polylineCoordinates = [];
+        late PolylineRequest request;
+        if (orders[0].status == '2') {
+          request = PolylineRequest(
+            origin: PointLatLng(rider.latitude, rider.longitude),
+            destination: PointLatLng(pickup.latitude, pickup.longitude),
+            mode: TravelMode.driving,
+          );
+        } else if (orders[0].status == '3') {
+          request = PolylineRequest(
+            origin: PointLatLng(rider.latitude, rider.longitude),
+            destination:
+                PointLatLng(destination.latitude, destination.longitude),
+            mode: TravelMode.driving,
+          );
         }
 
-        await _addRiderMarker(rider);
+        PolylineResult result = await polylinePoints.getRouteBetweenCoordinates(
+          request: request,
+          googleApiKey: apiKey,
+        );
+
+        if (result.points.isNotEmpty) {
+          for (var point in result.points) {
+            polylineCoordinates.add(LatLng(point.latitude, point.longitude));
+          }
+
+          _polylines.add(Polyline(
+            polylineId: PolylineId('route_$index'),
+            points: polylineCoordinates,
+            color: Colors.blue,
+            width: 5,
+          ));
+        }
       } else {
         log("Failed to load directions for origin: $rider - ${response.reasonPhrase}");
       }
@@ -281,7 +320,7 @@ class _StatuspageState extends State<StatusRider> {
         position: destination,
         infoWindow:
             InfoWindow(title: 'Destination', snippet: '$distance $duration'),
-        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
+        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
       ));
     });
   }
@@ -293,7 +332,7 @@ class _StatuspageState extends State<StatusRider> {
         markerId: const MarkerId('pickup'),
         position: pickup,
         infoWindow: InfoWindow(title: 'Pickup', snippet: '$distance $duration'),
-        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
+        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue),
       ));
     });
   }

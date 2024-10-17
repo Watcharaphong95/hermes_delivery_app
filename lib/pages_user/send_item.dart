@@ -381,7 +381,7 @@ class _SendItemState extends State<SendItem> {
       'receiverName': receiver.name,
       'latReceiver': receiver.lat,
       'lngReceiver': receiver.lng,
-      'senderId': box.read('uid'),
+      'senderUid': box.read('uid'),
       'senderName': sender.name,
       'latSender': sender.lat,
       'lngSender': sender.lng,

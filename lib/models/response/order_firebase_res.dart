@@ -3,7 +3,7 @@ import 'package:intl/intl.dart';
 
 class OrderRes {
   final String receiverUid;
-  final String senderId;
+  final String senderUid;
   final DateTime createAt;
   final String detail;
   final String picture;
@@ -24,7 +24,7 @@ class OrderRes {
 
   OrderRes({
     required this.receiverUid,
-    required this.senderId,
+    required this.senderUid,
     required this.createAt,
     required this.detail,
     required this.picture,
@@ -49,7 +49,7 @@ class OrderRes {
 
     return OrderRes(
       receiverUid: data['receiverUid'].toString(),
-      senderId: data['senderId'].toString(),
+      senderUid: data['senderUid'].toString(),
       createAt: dateTime,
       detail: data['detail'] ?? '',
       picture: data['picture'] ?? '',

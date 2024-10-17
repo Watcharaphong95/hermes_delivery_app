@@ -1,18 +1,22 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:developer';
 import 'dart:math' hide log;
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_polyline_points/flutter_polyline_points.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:hermes_app/config/config.dart';
 import 'package:hermes_app/models/response/order_firebase_res.dart';
 import 'package:hermes_app/pages_rider/status_rider.dart';
 import 'package:hermes_app/pages_user/edit_profile_user.dart';
 import 'package:hermes_app/pages_user/status.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:http/http.dart' as http;
 
 class HomeRiderpage extends StatefulWidget {
   const HomeRiderpage({super.key});
@@ -22,10 +26,12 @@ class HomeRiderpage extends StatefulWidget {
 }
 
 class _HomeRiderpageState extends State<HomeRiderpage> {
+  String apiKey = '';
   double screenWidth = 0;
   double screenHeight = 0;
 
   final box = GetStorage();
+  PolylinePoints polylinePoints = PolylinePoints();
 
   var db = FirebaseFirestore.instance;
   late StreamSubscription listener;
@@ -35,6 +41,8 @@ class _HomeRiderpageState extends State<HomeRiderpage> {
   late CameraPosition initPosition;
 
   Set<Marker> _markers = {};
+  final Set<Polyline> _polylines = {};
+  final Set<Marker> _marker = {};
   late GoogleMapController mapController;
 
   late Stream<Position> currentPosition;
@@ -42,8 +50,8 @@ class _HomeRiderpageState extends State<HomeRiderpage> {
 
   @override
   void initState() {
-    // TODO: implement initState
     super.initState();
+    getApiKey();
     startRealtimeGet();
     startLocationUpdates();
     currentLatLng = LatLng(box.read('curLat'), box.read('curLng'));
@@ -54,7 +62,6 @@ class _HomeRiderpageState extends State<HomeRiderpage> {
 
   @override
   Widget build(BuildContext context) {
-    // ขนาดของหน้าจอ
     screenWidth = MediaQuery.of(context).size.width;
     screenHeight = MediaQuery.of(context).size.height;
     return PopScope(
@@ -216,45 +223,23 @@ class _HomeRiderpageState extends State<HomeRiderpage> {
     );
   }
 
-  void tapOnOrderCard(OrderRes item) {
-    // Get.to(() => const Statuspage());
-    double distance = Geolocator.distanceBetween(item.latSender!,
+  Future<void> tapOnOrderCard(OrderRes item) async {
+    _marker.clear;
+    _polylines.clear;
+    _addMarkerReceiver(item);
+    _addMarkerRider();
+    _addMarkerSender(item);
+
+    double distanceToSender = Geolocator.distanceBetween(currentLatLng.latitude,
+            currentLatLng.longitude, item.latSender!, item.lngSender!) /
+        1000;
+
+    double distanceToReceiver = Geolocator.distanceBetween(item.latSender!,
             item.lngSender!, item.latReceiver!, item.lngReceiver!) /
-        1000; // Distance in kilometers
+        1000;
 
-    double speed = 50; // Speed in km/h
-    double totalMinutes = (distance / speed) * 60; // Total time in minutes
-
-    int hours = totalMinutes ~/ 60; // Get the number of full hours
-    int minutes = (totalMinutes % 60).round(); // Get the remaining minutes
-
-    _markers.clear();
-
-    _markers.add(Marker(
-      markerId: MarkerId(item.senderName ?? 'Sender'),
-      position: LatLng(item.latSender!, item.lngSender!),
-      icon: BitmapDescriptor.defaultMarkerWithHue(
-          BitmapDescriptor.hueBlue), // Change color here
-      infoWindow: InfoWindow(title: item.senderName, snippet: 'ตำแหน่งผู้ส่ง'),
-    ));
-
-    _markers.add(Marker(
-      markerId: MarkerId(item.receiverName ?? 'Receiver'),
-      position: LatLng(item.latReceiver!, item.lngReceiver!),
-      icon: BitmapDescriptor.defaultMarkerWithHue(
-          BitmapDescriptor.hueGreen), // Change color here
-      infoWindow:
-          InfoWindow(title: item.receiverName, snippet: 'ตำแหน่งผู้รับ'),
-    ));
-
-    _markers.add(Marker(
-      markerId: const MarkerId('You'),
-      position: LatLng(currentLatLng.latitude, currentLatLng.longitude),
-      icon: BitmapDescriptor.defaultMarkerWithHue(
-          BitmapDescriptor.hueRed), // Change color here
-      infoWindow: const InfoWindow(title: 'You', snippet: 'ตำแหน่งของคุณ'),
-    ));
-
+    log(distanceToReceiver.toString());
+    log(distanceToSender.toString());
     showDialog(
       context: context,
       builder: (context) {
@@ -274,6 +259,7 @@ class _HomeRiderpageState extends State<HomeRiderpage> {
                       initialCameraPosition: initPosition,
                       myLocationEnabled: false,
                       markers: _markers,
+                      polylines: _polylines,
                       onMapCreated: (GoogleMapController controller) {
                         mapController = controller;
                         Future.delayed(const Duration(milliseconds: 200), () {
@@ -282,7 +268,7 @@ class _HomeRiderpageState extends State<HomeRiderpage> {
                       },
                       zoomGesturesEnabled: true, // Disable zoom gestures
                       scrollGesturesEnabled: true,
-                      zoomControlsEnabled: false, // Disable zoom controls
+                      zoomControlsEnabled: true, // Disable zoom controls
                       myLocationButtonEnabled: false,
                     ),
                   ),
@@ -291,14 +277,14 @@ class _HomeRiderpageState extends State<HomeRiderpage> {
                   height: 10,
                 ),
                 Text(
-                  'ระยะทาง: ${distance.toStringAsFixed(2)} กม',
+                  'ระยะทางถึงผู้ส่ง: ${distanceToSender.toStringAsFixed(2)} กม',
                   style: const TextStyle(
                       fontSize: 18, fontWeight: FontWeight.bold),
                 ),
                 Text(
-                  hours > 0
-                      ? 'เวลา $hours ชม, $minutes นาที'
-                      : 'เวลา $minutes นาที',
+                  'ระยะทางถึงผู้รับ: ${distanceToReceiver.toStringAsFixed(2)} กม',
+                  style: const TextStyle(
+                      fontSize: 18, fontWeight: FontWeight.bold),
                 ),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -345,6 +331,14 @@ class _HomeRiderpageState extends State<HomeRiderpage> {
     );
   }
 
+  Future<void> getApiKey() async {
+    await Configuration.getConfig().then((config) {
+      setState(() {
+        apiKey = config['apiKey'];
+      });
+    });
+  }
+
   void readData() async {
     await initializeDateFormatting('th', null);
     var result =
@@ -359,6 +353,37 @@ class _HomeRiderpageState extends State<HomeRiderpage> {
     ordersReceive.sort((a, b) => b.createAt.compareTo(a.createAt));
 
     setState(() {});
+  }
+
+  void _addMarkerRider() {
+    _markers.add(Marker(
+      markerId: const MarkerId('You'),
+      position: LatLng(currentLatLng.latitude, currentLatLng.longitude),
+      icon: BitmapDescriptor.defaultMarkerWithHue(
+          BitmapDescriptor.hueRed), // Change color here
+      infoWindow: const InfoWindow(title: 'You', snippet: 'ตำแหน่งของคุณ'),
+    ));
+  }
+
+  void _addMarkerSender(OrderRes item) {
+    _markers.add(Marker(
+      markerId: MarkerId(item.senderName ?? 'Sender'),
+      position: LatLng(item.latSender!, item.lngSender!),
+      icon: BitmapDescriptor.defaultMarkerWithHue(
+          BitmapDescriptor.hueBlue), // Change color here
+      infoWindow: InfoWindow(title: item.senderName, snippet: 'ตำแหน่งผู้ส่ง'),
+    ));
+  }
+
+  void _addMarkerReceiver(OrderRes item) {
+    _markers.add(Marker(
+      markerId: MarkerId(item.receiverName ?? 'Receiver'),
+      position: LatLng(item.latReceiver!, item.lngReceiver!),
+      icon: BitmapDescriptor.defaultMarkerWithHue(
+          BitmapDescriptor.hueGreen), // Change color here
+      infoWindow:
+          InfoWindow(title: item.receiverName, snippet: 'ตำแหน่งผู้รับ'),
+    ));
   }
 
   void startRealtimeGet() {

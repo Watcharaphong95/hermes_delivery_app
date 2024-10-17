@@ -5,6 +5,7 @@ import 'dart:math' hide log;
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_polyline_points/flutter_polyline_points.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
@@ -23,19 +24,22 @@ class Statuspage extends StatefulWidget {
 
 class _StatuspageState extends State<Statuspage> {
   final box = GetStorage();
+  PolylinePoints polylinePoints = PolylinePoints();
   String apiKey = "";
   bool isLoadingMap = true;
   late GoogleMapController mapController;
   Set<Marker> _markers = {};
+  final Set<Polyline> _polylines = {};
 
   var db = FirebaseFirestore.instance;
   late StreamSubscription listener;
 
   List<OrderRes> orders = [];
 
-  List<LatLng> origins = [];
+  List<Locations> origins = [];
 
   late LatLng destination;
+  late LatLng userLocation;
 
   CameraPosition initPosition = const CameraPosition(
     target: LatLng(16.246671218679253, 103.25207957788868),
@@ -47,6 +51,9 @@ class _StatuspageState extends State<Statuspage> {
     super.initState();
     readData();
     log(widget.docId);
+
+    initPosition =
+        CameraPosition(target: LatLng(box.read('curLat'), box.read('curLng')));
   }
 
   @override
@@ -125,12 +132,15 @@ class _StatuspageState extends State<Statuspage> {
                   initialCameraPosition: initPosition,
                   myLocationEnabled: false,
                   markers: _markers,
+                  polylines: _polylines,
                   onMapCreated: (GoogleMapController controller) {
                     mapController = controller;
-                    _fitAllMarkers(); // Fit all markers when the map is created
+                    Future.delayed(const Duration(milliseconds: 200), () {
+                      _fitAllMarkers();
+                    }); // Fit all markers when the map is created
                   },
                   zoomGesturesEnabled: true,
-                  scrollGesturesEnabled: true,
+                  scrollGesturesEnabled: false,
                   zoomControlsEnabled: false,
                   myLocationButtonEnabled: false,
                 ),
@@ -138,16 +148,8 @@ class _StatuspageState extends State<Statuspage> {
             ),
             Padding(
               padding: EdgeInsets.fromLTRB(
-                screenWidth * 0.1,
-                screenHeight * 0.31,
-                screenWidth * 0.1,
-                0,
-              ),
-            ),
-            Padding(
-              padding: EdgeInsets.fromLTRB(
                 screenWidth * 0.07,
-                screenHeight * 0.54,
+                screenHeight * 0.57,
                 screenWidth * 0.1,
                 0,
               ),
@@ -172,6 +174,7 @@ class _StatuspageState extends State<Statuspage> {
   }
 
   void readData() async {
+    origins.clear();
     await initializeDateFormatting('th', null);
     var result = await db.collection('order').doc(widget.docId).get();
 
@@ -180,8 +183,11 @@ class _StatuspageState extends State<Statuspage> {
     orders.sort((a, b) => b.createAt.compareTo(a.createAt));
 
     destination = LatLng(orders[0].latReceiver!, orders[0].lngReceiver!);
+    userLocation = LatLng(orders[0].latSender!, orders[0].lngSender!);
     for (var order in orders) {
-      origins.add(LatLng(order.latRider!, order.lngRider!));
+      origins.add(Locations(
+          location: LatLng(order.latRider!, order.lngRider!),
+          status: order.status));
     }
 
     setupMarkers();
@@ -205,9 +211,16 @@ class _StatuspageState extends State<Statuspage> {
     });
 
     for (int index = 0; index < origins.length; index++) {
-      LatLng origin = origins[index];
-      String url =
-          "https://maps.googleapis.com/maps/api/directions/json?origin=${origin.latitude},${origin.longitude}&destination=${destination.latitude},${destination.longitude}&mode=driving&key=$apiKey";
+      Locations origin = origins[index];
+      String url = '';
+      log(origin.status);
+      if (origin.status == '2') {
+        url =
+            "https://maps.googleapis.com/maps/api/directions/json?origin=${origin.location.latitude},${origin.location.longitude}&destination=${userLocation.latitude},${userLocation.longitude}&mode=driving&key=$apiKey";
+      } else if (origin.status == '3') {
+        url =
+            "https://maps.googleapis.com/maps/api/directions/json?origin=${origin.location.latitude},${origin.location.longitude}&destination=${destination.latitude},${destination.longitude}&mode=driving&key=$apiKey";
+      }
 
       final response = await http.get(Uri.parse(url));
 
@@ -227,13 +240,55 @@ class _StatuspageState extends State<Statuspage> {
         log("Duration from $origin to destination: $duration");
 
         await _addOriginMarker(
-            origin, distance, duration, 'Rider ${index + 1}');
+            origin.location, distance, duration, 'Rider ${index + 1}');
+
+        List<LatLng> polylineCoordinates = [];
+        late PolylineRequest request;
+
+        if (origin.status == '2') {
+          request = PolylineRequest(
+            origin: PointLatLng(
+                origin.location.latitude, origin.location.longitude),
+            destination:
+                PointLatLng(userLocation.latitude, userLocation.longitude),
+            mode: TravelMode.driving,
+          );
+        } else if (origin.status == '3') {
+          request = PolylineRequest(
+            origin: PointLatLng(
+                origin.location.latitude, origin.location.longitude),
+            destination:
+                PointLatLng(destination.latitude, destination.longitude),
+            mode: TravelMode.driving,
+          );
+        }
+
+        PolylineResult result = await polylinePoints.getRouteBetweenCoordinates(
+          request: request,
+          googleApiKey: apiKey,
+        );
+
+        if (result.points.isNotEmpty) {
+          for (var point in result.points) {
+            polylineCoordinates.add(LatLng(point.latitude, point.longitude));
+          }
+
+          _polylines.add(Polyline(
+            polylineId: PolylineId('route_$index'),
+            points: polylineCoordinates,
+            color: Colors.blue,
+            width: 5,
+          ));
+        } else {
+          log('Failed to generate polyline for the rider to user location.');
+        }
       } else {
         log("Failed to load directions for origin: $origin - ${response.reasonPhrase}");
       }
     }
 
     _addDestinationMarker();
+    _addUserMarker();
     _fitAllMarkers();
   }
 
@@ -243,7 +298,18 @@ class _StatuspageState extends State<Statuspage> {
         markerId: const MarkerId('destination'),
         position: destination,
         infoWindow: const InfoWindow(title: 'Destination'),
-        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
+        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
+      ));
+    });
+  }
+
+  void _addUserMarker() {
+    setState(() {
+      _markers.add(Marker(
+        markerId: const MarkerId('user'),
+        position: userLocation,
+        infoWindow: const InfoWindow(title: 'You'),
+        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue),
       ));
     });
   }
@@ -256,9 +322,6 @@ class _StatuspageState extends State<Statuspage> {
       _markers.add(Marker(
         markerId: MarkerId('origin_${origin.latitude}_${origin.longitude}'),
         position: origin,
-        infoWindow: InfoWindow(
-          title: '$riderLabel Distance: $distance Duration: $duration',
-        ),
         icon: riderIcon,
       ));
     });
@@ -302,4 +365,14 @@ class _StatuspageState extends State<Statuspage> {
     final Uint8List bytes = data.buffer.asUint8List();
     return BitmapDescriptor.fromBytes(bytes);
   }
+}
+
+class Locations {
+  final LatLng location;
+  final String status;
+
+  Locations({
+    required this.location,
+    required this.status,
+  });
 }
