@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:hermes_app/models/response/order_firebase_res.dart';
+import 'package:hermes_app/pages_user/all_status.dart';
 import 'package:hermes_app/pages_user/status.dart';
 import 'package:intl/date_symbol_data_local.dart';
 
@@ -17,6 +18,8 @@ class ItemsList extends StatefulWidget {
 }
 
 class _ListpageState extends State<ItemsList> {
+  double screenWidth = 0;
+  double screenHeight = 0;
   final box = GetStorage();
 
   var db = FirebaseFirestore.instance;
@@ -75,8 +78,8 @@ class _ListpageState extends State<ItemsList> {
   @override
   Widget build(BuildContext context) {
     // Get screen size
-    double screenWidth = MediaQuery.of(context).size.width;
-    double screenHeight = MediaQuery.of(context).size.height;
+    screenWidth = MediaQuery.of(context).size.width;
+    screenHeight = MediaQuery.of(context).size.height;
 
     return PopScope(
       onPopInvoked: (didpop) async {
@@ -86,7 +89,6 @@ class _ListpageState extends State<ItemsList> {
         body: SingleChildScrollView(
           child: Column(
             children: [
-              // Top container with back button and title
               Container(
                 width: screenWidth,
                 height: screenHeight * 0.2,
@@ -205,110 +207,231 @@ class _ListpageState extends State<ItemsList> {
                 child: SizedBox(
                   width: screenWidth,
                   height: screenHeight * 0.6,
-                  child: ListView.builder(
-                    itemCount:
-                        isReceived ? ordersReceive.length : ordersSend.length,
-                    itemBuilder: (context, index) {
-                      final item =
-                          isReceived ? ordersReceive[index] : ordersSend[index];
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 20),
-                        child: GestureDetector(
-                          onTap: () {
-                            Get.to(() => Statuspage(
-                                  docId: item.documentId,
-                                ));
-                          },
-                          child: Card(
-                            color: const Color(0xFFE8E8E8),
-                            child: Padding(
-                              padding: const EdgeInsets.fromLTRB(20, 10, 0, 10),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    getStatus(item.status),
-                                    style: TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.bold,
-                                      color: getStatusColor(item.status),
-                                    ),
-                                  ),
-                                  Padding(
-                                    padding: const EdgeInsets.only(top: 10),
-                                    child: Row(
-                                      children: [
-                                        const Text(
-                                          'สินค้า : ',
-                                          style: TextStyle(
-                                            fontSize: 14,
-                                            color: Colors.black,
+                  child: Column(
+                    children: [
+                      if (isReceived && ordersReceive.isEmpty)
+                        const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 20.0),
+                          child: Center(
+                            child: Text(
+                              'ไม่มีของที่ต้องรับ',
+                              style:
+                                  TextStyle(fontSize: 24, color: Colors.black),
+                            ),
+                          ),
+                        )
+                      else if (!isReceived && ordersSend.isEmpty)
+                        const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 20.0),
+                          child: Center(
+                            child: Text(
+                              'ไม่มีของที่ส่ง',
+                              style:
+                                  TextStyle(fontSize: 24, color: Colors.black),
+                            ),
+                          ),
+                        )
+                      else
+                        Expanded(
+                          child: ListView.builder(
+                            itemCount: isReceived
+                                ? ordersReceive.length
+                                : ordersSend.length,
+                            itemBuilder: (context, index) {
+                              // log('test');
+                              if (isReceived && ordersReceive.isEmpty) {
+                                log('test');
+                                return const Center(
+                                  child: Text('No received orders available.'),
+                                );
+                              } else if (!isReceived && ordersSend.isEmpty) {
+                                return const Center(
+                                  child: Text('No sent orders available.'),
+                                );
+                              }
+
+                              final item = isReceived
+                                  ? ordersReceive[index]
+                                  : ordersSend[index];
+                              return Padding(
+                                padding: const EdgeInsets.only(bottom: 20),
+                                child: GestureDetector(
+                                  onTap: () {
+                                    Get.to(() => Statuspage(
+                                          docId: item.documentId,
+                                        ));
+                                  },
+                                  child: Card(
+                                    color: const Color(0xFFE8E8E8),
+                                    child: Padding(
+                                      padding: const EdgeInsets.fromLTRB(
+                                          20, 10, 0, 10),
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            getStatus(item.status),
+                                            style: TextStyle(
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.bold,
+                                              color:
+                                                  getStatusColor(item.status),
+                                            ),
                                           ),
-                                        ),
-                                        Text(
-                                          item.item ?? '',
-                                          style: const TextStyle(
-                                            fontSize: 15,
-                                            color: Colors.black,
+                                          Padding(
+                                            padding:
+                                                const EdgeInsets.only(top: 10),
+                                            child: Row(
+                                              children: [
+                                                const Text(
+                                                  'สินค้า : ',
+                                                  style: TextStyle(
+                                                    fontSize: 14,
+                                                    color: Colors.black,
+                                                  ),
+                                                ),
+                                                Text(
+                                                  item.item ?? '',
+                                                  style: const TextStyle(
+                                                    fontSize: 15,
+                                                    color: Colors.black,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
                                           ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  Padding(
-                                    padding: const EdgeInsets.only(top: 0),
-                                    child: Row(
-                                      children: [
-                                        const Text(
-                                          'ผู้ส่ง : ',
-                                          style: TextStyle(
-                                            fontSize: 14,
-                                            color: Colors.black,
+                                          Padding(
+                                            padding:
+                                                const EdgeInsets.only(top: 0),
+                                            child: Row(
+                                              children: [
+                                                const Text(
+                                                  'ผู้ส่ง : ',
+                                                  style: TextStyle(
+                                                    fontSize: 14,
+                                                    color: Colors.black,
+                                                  ),
+                                                ),
+                                                Text(
+                                                  item.senderName ?? '',
+                                                  style: const TextStyle(
+                                                    fontSize: 15,
+                                                    color: Colors.black,
+                                                  ),
+                                                ),
+                                                const SizedBox(width: 50),
+                                                const Text(
+                                                  'ผู้รับ : ',
+                                                  style: TextStyle(
+                                                    fontSize: 14,
+                                                    color: Colors.black,
+                                                  ),
+                                                ),
+                                                Text(
+                                                  item.receiverName ?? '',
+                                                  style: const TextStyle(
+                                                    fontSize: 15,
+                                                    color: Colors.black,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
                                           ),
-                                        ),
-                                        Text(
-                                          item.senderName ?? '',
-                                          style: const TextStyle(
-                                            fontSize: 15,
-                                            color: Colors.black,
+                                          Padding(
+                                            padding:
+                                                const EdgeInsets.only(top: 15),
+                                            child: Text(
+                                              item.createAt.toString() ?? '',
+                                              style: const TextStyle(
+                                                fontSize: 14,
+                                                fontWeight: FontWeight.bold,
+                                                color: Color(0xFFBFBDBC),
+                                              ),
+                                            ),
                                           ),
-                                        ),
-                                        const SizedBox(width: 50),
-                                        const Text(
-                                          'ผู้รับ : ',
-                                          style: TextStyle(
-                                            fontSize: 14,
-                                            color: Colors.black,
-                                          ),
-                                        ),
-                                        Text(
-                                          item.receiverName ?? '',
-                                          style: const TextStyle(
-                                            fontSize: 15,
-                                            color: Colors.black,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  Padding(
-                                    padding: const EdgeInsets.only(top: 15),
-                                    child: Text(
-                                      item.createAt.toString() ?? '',
-                                      style: const TextStyle(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.bold,
-                                        color: Color(0xFFBFBDBC),
+                                        ],
                                       ),
                                     ),
                                   ),
-                                ],
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+
+                      // Add button for the "Received" list
+                      if (isReceived &&
+                          ordersSend.isNotEmpty &&
+                          ordersReceive.any((order) =>
+                              order.status != 4.toString() &&
+                              order.status != 5.toString()))
+                        Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 20.0),
+                          child: ElevatedButton(
+                            onPressed: () {
+                              Get.to(() => AllStatus(
+                                    isReceive: true,
+                                  ));
+                              log('recieve');
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFFFF7723),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(30),
+                              ),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 40,
+                                vertical: 15,
+                              ),
+                            ),
+                            child: const Text(
+                              'แผนที่รายการรับทั้งหมด',
+                              style: TextStyle(
+                                fontSize: 16,
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
                               ),
                             ),
                           ),
                         ),
-                      );
-                    },
+
+                      // Add button for the "Send" list
+                      if (!isReceived &&
+                          ordersSend.isNotEmpty &&
+                          ordersSend.any((order) =>
+                              order.status != 4.toString() &&
+                              order.status != 5.toString()))
+                        Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 20.0),
+                          child: ElevatedButton(
+                            onPressed: () {
+                              Get.to(() => AllStatus(
+                                    isReceive: false,
+                                  ));
+                              log('send');
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFFFF7723),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(30),
+                              ),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 40,
+                                vertical: 15,
+                              ),
+                            ),
+                            child: const Text(
+                              'แผนที่รายการส่งทั้งหมด',
+                              style: TextStyle(
+                                fontSize: 16,
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
                   ),
                 ),
               ),
@@ -358,7 +481,7 @@ class _ListpageState extends State<ItemsList> {
     await initializeDateFormatting('th', null);
     var result = await db
         .collection('order')
-        .where('receiverUid', isEqualTo: box.read('uid'))
+        .where('receiverUid', isEqualTo: int.parse(box.read('uid')))
         .get();
     // log(result.docs.length.toString());
 
@@ -371,7 +494,7 @@ class _ListpageState extends State<ItemsList> {
 
     // for (OrderRes order in ordersReceive) {
     //   log('Item: ${order.item}');
-    //   log('Sender UID: ${order.senderId}');
+    //   log('Sender UID: ${order.senderUid}');
     //   log('Receiver UID: ${order.receiverUid}');
     //   log('Detail: ${order.detail}');
     //   log('Picture URL: ${order.picture}');
@@ -387,7 +510,7 @@ class _ListpageState extends State<ItemsList> {
     await initializeDateFormatting('th', null);
     var result = await db
         .collection('order')
-        .where('senderId', isEqualTo: box.read('uid'))
+        .where('senderUid', isEqualTo: box.read('uid'))
         .get();
     // log(result.docs.length.toString());
 
@@ -400,7 +523,7 @@ class _ListpageState extends State<ItemsList> {
 
     // for (OrderRes order in ordersSend) {
     //   log('Item: ${order.item}');
-    //   log('Sender UID: ${order.senderId}');
+    //   log('Sender UID: ${order.senderUid}');
     //   log('Receiver UID: ${order.receiverUid}');
     //   log('Detail: ${order.detail}');
     //   log('Picture URL: ${order.picture}');

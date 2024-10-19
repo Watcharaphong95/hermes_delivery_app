@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:hermes_app/pages_user/all_status.dart';
 import 'package:hermes_app/pages_user/home.dart';
 import 'package:hermes_app/pages_user/items_list.dart';
 import 'package:hermes_app/pages_user/profile.dart';
@@ -41,7 +42,6 @@ class _NavbuttompageState extends State<NavbuttompageUser> {
     double screenHeight = MediaQuery.of(context).size.height;
     return Scaffold(
       appBar: null,
-      // ตรวจสอบว่าเป็นหน้าโปรไฟล์หรือหน้าตรวจผลรางวัลหรือไม่
       bottomNavigationBar: BottomNavigationBar(
         items: [
           BottomNavigationBarItem(
@@ -113,7 +113,6 @@ class _NavbuttompageState extends State<NavbuttompageUser> {
         unselectedItemColor: const Color.fromARGB(255, 0, 0, 0),
         type: BottomNavigationBarType.fixed,
       ),
-
       body: pageOptions[widget.selectedPage],
     );
   }

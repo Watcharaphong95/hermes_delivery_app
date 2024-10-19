@@ -13,6 +13,7 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:hermes_app/config/config.dart';
 import 'package:hermes_app/models/response/select_user_uid.dart';
 import 'package:hermes_app/models/select_user_all.dart';
+import 'package:hermes_app/pages_user/profile.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'package:map_picker/map_picker.dart';
@@ -31,8 +32,6 @@ class _EditProfileUserpageState extends State<EditProfileUserpage> {
   List<SelectUserUid> user = [];
   TextEditingController nameCtl = TextEditingController();
   TextEditingController phoneCtl = TextEditingController();
-  TextEditingController passwordCtl = TextEditingController();
-
   TextEditingController addressCtl = TextEditingController();
   String pictureUrl = "";
   double screenWidth = 0, screenHeight = 0;
@@ -201,28 +200,7 @@ class _EditProfileUserpageState extends State<EditProfileUserpage> {
                                     ),
                                   ),
                                 ),
-                                const SizedBox(height: 15),
-                                SizedBox(
-                                  width: screenWidth * 0.8,
-                                  height: screenHeight * 0.06,
-                                  child: Container(
-                                    decoration: BoxDecoration(
-                                      color: Colors.white,
-                                      borderRadius: BorderRadius.circular(30),
-                                    ),
-                                    child: TextField(
-                                      controller: passwordCtl,
-                                      decoration: const InputDecoration(
-                                        hintText: 'รหัส',
-                                        hintStyle: TextStyle(
-                                            fontSize: 14, color: Colors.black),
-                                        border: InputBorder.none,
-                                        contentPadding: EdgeInsets.symmetric(
-                                            vertical: 15, horizontal: 35),
-                                      ),
-                                    ),
-                                  ),
-                                ),
+
                                 const SizedBox(height: 15),
                                 const Padding(
                                   padding: EdgeInsets.fromLTRB(20, 0, 20, 5),
@@ -316,8 +294,7 @@ class _EditProfileUserpageState extends State<EditProfileUserpage> {
                                     ),
                                     ElevatedButton(
                                       onPressed: () {
-                                        Navigator.pop(context);
-                                        updateprofile();
+                                        updateprofile(context);
                                       },
                                       style: ElevatedButton.styleFrom(
                                         backgroundColor:
@@ -390,27 +367,96 @@ class _EditProfileUserpageState extends State<EditProfileUserpage> {
     setState(() {});
   }
 
-  void updateprofile() async {
+  void updateprofile(BuildContext context) async {
     String? phone = box.read('phone');
     String? uid = box.read('uid');
+
+    // เตรียมข้อมูล JSON สำหรับการอัปเดต
     var json = {
-      "phone": phoneCtl.text,
-      "name": nameCtl.text,
-      "address": addressCtl.text,
-      "lat": currentLocation?.latitude,
-      "lng": currentLocation?.longitude,
-      "password": passwordCtl.text,
-      "picture": pictureUrl,
+      "phone": phoneCtl.text.isNotEmpty ? phoneCtl.text : '',
+      "name": nameCtl.text.isNotEmpty ? nameCtl.text : '',
+      "address": addressCtl.text.isNotEmpty ? addressCtl.text : '',
+      "lat": currentLocation?.latitude ?? 0.0, // ค่าเริ่มต้นเป็น 0.0 ถ้า null
+      "lng": currentLocation?.longitude ?? 0.0, // ค่าเริ่มต้นเป็น 0.0 ถ้า null
+      "password": user[0].password ?? '', // ให้ค่าเริ่มต้นถ้า null
+      "picture": pictureUrl ?? '', // ให้ค่าเริ่มต้นถ้า null
     };
-    // Not using the model, use jsonEncode() and jsonDecode()
-    try {
-      var res = await http.put(Uri.parse('$url/user/update/$uid'),
-          headers: {"Content-Type": "application/json; charset=utf-8"},
-          body: jsonEncode(json));
-      log(res.body);
-      var result = jsonDecode(res.body);
-      log(result['message']);
-    } catch (err) {}
+
+    // แสดงกล่องยืนยัน
+    bool confirmUpdate = await showDialog<bool>(
+          context: context,
+          builder: (BuildContext context) {
+            return Dialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20), // รูปแบบมุม
+              ),
+              child: Container(
+                width: screenWidth, // ปรับความกว้าง
+                padding: const EdgeInsets.all(0), // เว้นพื้นที่รอบ
+                child: Column(
+                  mainAxisSize:
+                      MainAxisSize.min, // ขนาดของคอลัมน์จะใช้พื้นที่ที่จำเป็น
+                  children: <Widget>[
+                    const Padding(
+                      padding: EdgeInsets.fromLTRB(0, 30, 10, 0),
+                      child: Center(
+                          child: Text(
+                        "ยืนยันการเปลี่ยนข้อมูล",
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      )),
+                    ),
+                    const SizedBox(height: 10), // เว้นพื้นที่
+                    const Padding(
+                      padding: EdgeInsets.all(5),
+                      child: Text("คุณต้องการเปลี่ยนข้อมูลโปรไฟล์หรือไม่?"),
+                    ),
+                    const SizedBox(height: 10), // เว้นพื้นที่
+                    const Divider(), // เพิ่มเส้นขั้น
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(0, 5, 0, 10),
+                      child: Row(
+                        mainAxisAlignment:
+                            MainAxisAlignment.spaceEvenly, // จัดเรียงปุ่ม
+                        children: <Widget>[
+                          TextButton(
+                            onPressed: () {
+                              Navigator.of(context)
+                                  .pop(false); // ผู้ใช้กด "ยกเลิก"
+                            },
+                            child: const Text(
+                              "ยกเลิก",
+                              style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.black),
+                            ),
+                          ),
+                          TextButton(
+                            onPressed: () {
+                              Navigator.of(context)
+                                  .pop(true); // ผู้ใช้กด "ยืนยัน"
+                            },
+                            child: const Text(
+                              "ยืนยัน",
+                              style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFFFF7723)),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        ) ??
+        false;
   }
 
   Future<void> addProfileImage() async {

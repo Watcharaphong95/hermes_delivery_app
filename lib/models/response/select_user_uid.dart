@@ -44,8 +44,8 @@ class SelectUserUid {
         name: json["name"],
         password: json["password"],
         address: json["address"],
-        lat: json["lat"].toDouble(), // Ensure lat is a double
-        lng: json["lng"].toDouble(), // Ensure lng is a double
+        lat: (json["lat"] ?? 0.0).toDouble(), // Use 0.0 if lat is null
+        lng: (json["lng"] ?? 0.0).toDouble(), // Use 0.0 if lng is null
         picture: json["picture"],
         type: json["type"],
       );
@@ -72,5 +72,6 @@ void main() {
   SelectUserUid user = selectUserUidFromJson(jsonString);
 
   // Print the details of the user
-  print('User ID: ${user.uid}, Name: ${user.name}, Phone: ${user.phone}');
+  print(
+      'User ID: ${user.uid}, Name: ${user.name}, Phone: ${user.phone}, Latitude: ${user.lat}, Longitude: ${user.lng}');
 }

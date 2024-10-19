@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:developer';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:hermes_app/config/config.dart';
@@ -112,6 +113,10 @@ class _LoginPageState extends State<LoginPage> {
                             ),
                             child: TextField(
                               controller: phoneCtl,
+                              keyboardType: TextInputType.phone,
+                              inputFormatters: <TextInputFormatter>[
+                                FilteringTextInputFormatter.digitsOnly,
+                              ],
                               decoration: const InputDecoration(
                                 prefixIcon: Icon(Icons.phone),
                                 hintText: 'เบอร์โทรศัพท์',
@@ -282,7 +287,8 @@ class _LoginPageState extends State<LoginPage> {
         log('Error during login: $error');
         // แสดงข้อความแจ้งเตือนเมื่อเกิดข้อผิดพลาด
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $error')),
+          const SnackBar(
+              content: Center(child: Text('Invalid phone or password'))),
         );
       }
     } else {
