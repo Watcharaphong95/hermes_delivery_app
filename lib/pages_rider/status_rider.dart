@@ -7,10 +7,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_polyline_points/flutter_polyline_points.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:hermes_app/config/config.dart';
 import 'package:hermes_app/models/response/order_firebase_res.dart';
+import 'package:hermes_app/pages_rider/home_rider.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/date_symbol_data_local.dart';
 
@@ -42,7 +44,8 @@ class _StatuspageState extends State<StatusRider> {
   late LatLng destination;
   late LatLng pickup;
 
-  int distanceDestination = 0;
+  var distance;
+  var duration;
   bool distanceAccpet = false;
 
   CameraPosition initPosition = const CameraPosition(
@@ -144,25 +147,71 @@ class _StatuspageState extends State<StatusRider> {
               ),
               Padding(
                 padding: EdgeInsets.fromLTRB(
-                  screenWidth * 0.1,
-                  screenHeight * 0.31,
-                  screenWidth * 0.1,
-                  0,
-                ),
-              ),
-              Padding(
-                padding: EdgeInsets.fromLTRB(
                   screenWidth * 0.07,
                   screenHeight * 0.55,
                   screenWidth * 0.1,
                   0,
                 ),
-                child: Text(distanceDestination.toString(),
-                    style: const TextStyle(
-                      fontSize: 17,
-                      fontWeight: FontWeight.bold,
-                    )),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text('สถานะการจัดส่ง',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        )),
+                    Row(
+                      children: [
+                        Text(distance.toString(),
+                            style: const TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                            )),
+                        SizedBox(
+                          width: screenWidth * 0.02,
+                        ),
+                        Text(duration.toString(),
+                            style: const TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                            )),
+                      ],
+                    ),
+                  ],
+                ),
               ),
+              Padding(
+                padding: EdgeInsets.fromLTRB(
+                  screenWidth * 0.07,
+                  screenHeight * 0.6,
+                  screenWidth * 0.1,
+                  0,
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: [
+                    _buildStatusStep('ไรเดอร์\nรับงาน', Icons.inbox, true),
+                    _buildConnectorLine(true),
+                    _buildStatusStep(
+                        'ไรเดอร์\nรับสินค้า', Icons.directions_bike, true),
+                    _buildConnectorLine(false),
+                    _buildStatusStep(
+                        'กำลังจัดส่ง\nสินค้า', Icons.local_shipping, false),
+                    _buildConnectorLine(false),
+                    _buildStatusStep(
+                        'ส่งสินค้า\nเสร็จสิ้น', Icons.done_all, false),
+                  ],
+                ),
+              ),
+              Padding(
+                padding: EdgeInsets.fromLTRB(
+                  screenWidth * 0.07,
+                  screenHeight * 0.73,
+                  screenWidth * 0.1,
+                  0,
+                ),
+                child: const Text('TEST'),
+              )
             ],
           ),
         ),
@@ -194,19 +243,21 @@ class _StatuspageState extends State<StatusRider> {
       riders.add(LatLng(order.latRider!, order.lngRider!));
     }
     setupMarkers();
-    setState(() {
-      distanceDestination = Geolocator.distanceBetween(
-        orders[0].latRider!,
-        orders[0].lngRider!,
-        destination.latitude,
-        destination.longitude,
-      ).round();
-      if (distanceDestination < 20) {
-        distanceAccpet = true;
-      }
-      log(distanceDestination.toString());
-      initPosition = CameraPosition(target: destination);
-    });
+    setState(() {});
+  }
+
+  Future<void> checkRiderUid() async {
+    var check = await db
+        .collection("order")
+        .where('riderRid', isEqualTo: box.read('uid'))
+        .get();
+    if (check.docs.isEmpty) {
+      orders = check.docs.map((doc) {
+        return OrderRes.fromFirestore(doc.data(), doc.id);
+      }).toList();
+
+      Get.to(() => const HomeRiderpage());
+    }
   }
 
   Future<void> setupMarkers() async {
@@ -231,7 +282,7 @@ class _StatuspageState extends State<StatusRider> {
       String url = '';
       if (orders[0].status == '2') {
         url =
-            "https://maps.googleapis.com/maps/api/directions/json?origin=${destination.latitude},${destination.longitude}&destination=${rider.latitude},${rider.longitude}&mode=driving&key=$apiKey";
+            "https://maps.googleapis.com/maps/api/directions/json?origin=${rider.latitude},${rider.longitude}&destination=${pickup.latitude},${pickup.longitude}&mode=driving&key=$apiKey";
       } else if (orders[0].status == '3') {
         url =
             "https://maps.googleapis.com/maps/api/directions/json?origin=${rider.latitude},${rider.longitude}&destination=${destination.latitude},${destination.longitude}&mode=driving&key=$apiKey";
@@ -248,8 +299,8 @@ class _StatuspageState extends State<StatusRider> {
         }
 
         var leg = jsonResponse['routes'][0]['legs'][0];
-        var distance = leg['distance']['text'];
-        var duration = leg['duration']['text'];
+        distance = leg['distance']['text'];
+        duration = leg['duration']['text'];
 
         log("Distance from $rider to destination: $distance");
         log("Duration from $rider to destination: $duration");
@@ -417,5 +468,40 @@ class _StatuspageState extends State<StatusRider> {
         readData();
       });
     }, onError: (error) => log("Listen failed"));
+  }
+
+  Widget _buildStatusStep(String label, IconData icon, bool isActive) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        CircleAvatar(
+          radius: 24,
+          backgroundColor: isActive ? Colors.orange : Colors.grey,
+          child: Icon(icon, color: Colors.white),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          label,
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontSize: 12,
+            color: isActive ? Colors.black : Colors.grey,
+            fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildConnectorLine(bool isActive) {
+    return Expanded(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(0, 0, 0, 35),
+        child: Container(
+          height: 2,
+          color: isActive ? Colors.orange : Colors.black,
+        ),
+      ),
+    );
   }
 }
