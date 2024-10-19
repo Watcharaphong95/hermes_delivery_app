@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:hermes_app/config/config.dart';
-import 'package:hermes_app/models/request/user_where_id.dart';
+import 'package:hermes_app/models/response/select_user_uid.dart';
 import 'package:hermes_app/pages_user/edit_profile_user.dart';
 import 'package:hermes_app/pages_user/login.dart';
 import 'package:http/http.dart' as http;
@@ -19,7 +19,7 @@ class Profilepage extends StatefulWidget {
 class _ProfilepageState extends State<Profilepage> {
   String url = "";
   final box = GetStorage();
-  List<SelectUserWhereId> user = [];
+  List<SelectUserUid> user = [];
 
   @override
   void initState() {
@@ -300,8 +300,14 @@ class _ProfilepageState extends State<Profilepage> {
     url = config['apiEndPoint'];
     var res = await http.get(Uri.parse('$url/user/$uid'));
     log(res.body);
-    user = selectUserWhereIdFromJson(res.body);
+
+    // Assuming selectUserUidFromJson returns a single object, not a list
+    final singleUser = selectUserUidFromJson(res.body);
+
+    // If it's a single object, wrap it in a list
+    user = [singleUser];
+
     log(user.length.toString());
-    setState(() {}); // Call setState to refresh UI after data is
+    setState(() {}); // Call setState to refresh UI after data is retrieved
   }
 }

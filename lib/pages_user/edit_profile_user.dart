@@ -11,7 +11,8 @@ import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:hermes_app/config/config.dart';
-import 'package:hermes_app/models/request/user_where_id.dart';
+import 'package:hermes_app/models/response/select_user_uid.dart';
+import 'package:hermes_app/models/select_user_all.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'package:map_picker/map_picker.dart';
@@ -27,9 +28,11 @@ class EditProfileUserpage extends StatefulWidget {
 class _EditProfileUserpageState extends State<EditProfileUserpage> {
   String url = "";
   final box = GetStorage();
-  List<SelectUserWhereId> user = [];
+  List<SelectUserUid> user = [];
   TextEditingController nameCtl = TextEditingController();
   TextEditingController phoneCtl = TextEditingController();
+  TextEditingController passwordCtl = TextEditingController();
+
   TextEditingController addressCtl = TextEditingController();
   String pictureUrl = "";
   double screenWidth = 0, screenHeight = 0;
@@ -45,7 +48,7 @@ class _EditProfileUserpageState extends State<EditProfileUserpage> {
   var place = const LatLng(0, 0);
   Set<Marker> markers = {};
   LatLng? currentLocation;
-  late List<Placemark> placemarks;
+  late List<Placemark> placemarks = [];
 
   @override
   void initState() {
@@ -136,7 +139,7 @@ class _EditProfileUserpageState extends State<EditProfileUserpage> {
                         padding: const EdgeInsets.only(top: 80),
                         child: Container(
                           width: screenWidth * 0.85,
-                          height: screenHeight * 0.78,
+                          height: screenHeight * 0.80,
                           decoration: BoxDecoration(
                             color: const Color(0xFFE8E8E8),
                             borderRadius: BorderRadius.circular(20),
@@ -189,6 +192,28 @@ class _EditProfileUserpageState extends State<EditProfileUserpage> {
                                       controller: phoneCtl,
                                       decoration: const InputDecoration(
                                         hintText: 'เบอร์โทรศัพท์',
+                                        hintStyle: TextStyle(
+                                            fontSize: 14, color: Colors.black),
+                                        border: InputBorder.none,
+                                        contentPadding: EdgeInsets.symmetric(
+                                            vertical: 15, horizontal: 35),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 15),
+                                SizedBox(
+                                  width: screenWidth * 0.8,
+                                  height: screenHeight * 0.06,
+                                  child: Container(
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      borderRadius: BorderRadius.circular(30),
+                                    ),
+                                    child: TextField(
+                                      controller: passwordCtl,
+                                      decoration: const InputDecoration(
+                                        hintText: 'รหัส',
                                         hintStyle: TextStyle(
                                             fontSize: 14, color: Colors.black),
                                         border: InputBorder.none,
@@ -263,12 +288,12 @@ class _EditProfileUserpageState extends State<EditProfileUserpage> {
                                     padding:
                                         const EdgeInsets.fromLTRB(0, 10, 0, 30),
                                     child: Text(
-                                      'Latitude: ${user[0].lat} Longitude: ${user[0].lng}',
+                                      'Latitude: ${currentLocation?.latitude.toStringAsFixed(4) ?? user[0].lat.toStringAsFixed(4) ?? 'ยังไม่ได้เลือก'} Longitude: ${currentLocation?.longitude.toStringAsFixed(4) ?? user[0].lng.toStringAsFixed(4) ?? 'ยังไม่ได้เลือก'}',
                                       style: const TextStyle(fontSize: 12),
                                     ),
                                   ),
                                 ),
-                                // ปุ่มการกระทำ
+
                                 Row(
                                   mainAxisAlignment:
                                       MainAxisAlignment.spaceBetween,
@@ -351,9 +376,12 @@ class _EditProfileUserpageState extends State<EditProfileUserpage> {
     String? uid = box.read('uid');
     var config = await Configuration.getConfig();
     url = config['apiEndPoint'];
+
     var res = await http.get(Uri.parse('$url/user/$uid'));
     log(res.body);
-    user = selectUserWhereIdFromJson(res.body);
+    final singleUser = selectUserUidFromJson(res.body);
+
+    user = [singleUser];
     log(user.length.toString());
     nameCtl.text = user[0].name;
     phoneCtl.text = user[0].phone;
@@ -366,21 +394,21 @@ class _EditProfileUserpageState extends State<EditProfileUserpage> {
     String? phone = box.read('phone');
     String? uid = box.read('uid');
     var json = {
-      "phone": phoneCtl,
-      "name": nameCtl,
-      "address": addressCtl,
-      // "lat": lat,
-      // "lng": lng,
+      "phone": phoneCtl.text,
+      "name": nameCtl.text,
+      "address": addressCtl.text,
+      "lat": currentLocation?.latitude,
+      "lng": currentLocation?.longitude,
+      "password": passwordCtl.text,
       "picture": pictureUrl,
     };
     // Not using the model, use jsonEncode() and jsonDecode()
     try {
-      var res = await http.put(Uri.parse('$url/user/$uid'),
+      var res = await http.put(Uri.parse('$url/user/update/$uid'),
           headers: {"Content-Type": "application/json; charset=utf-8"},
           body: jsonEncode(json));
       log(res.body);
       var result = jsonDecode(res.body);
-      // Need to know json's property by reading from API Tester
       log(result['message']);
     } catch (err) {}
   }
@@ -477,7 +505,7 @@ class _EditProfileUserpageState extends State<EditProfileUserpage> {
     );
   }
 
-  // ฟังก์ชันสำหรับค้นหาสถานที่
+// ฟังก์ชันสำหรับค้นหาสถานที่
   Future<void> placeSearch() async {
     log('Searching for place...');
     if (addressCtl.text.length > 1) {
@@ -523,7 +551,7 @@ class _EditProfileUserpageState extends State<EditProfileUserpage> {
                     'assets/images/location_icon.svg',
                     height: 60,
                   ),
-                  mapPickerController: MapPickerController(),
+                  mapPickerController: mapPickerController,
                   child: GoogleMap(
                     myLocationButtonEnabled: true,
                     myLocationEnabled: true,
@@ -554,7 +582,6 @@ class _EditProfileUserpageState extends State<EditProfileUserpage> {
                     },
                     onCameraIdle: () async {
                       mapPickerController.mapFinishedMoving!();
-                      // ignore: unused_local_variable
                       placemarks = await placemarkFromCoordinates(
                         initPosition.target.latitude,
                         initPosition.target.longitude,
@@ -572,19 +599,26 @@ class _EditProfileUserpageState extends State<EditProfileUserpage> {
                       backgroundColor: const Color(0xFFFF7723)),
                   onPressed: () async {
                     if (placemarks.isNotEmpty) {
+                      log('Fetching nearby places...');
                       final String url =
                           'https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${initPosition.target.latitude},${initPosition.target.longitude}&radius=40&language=th&type=point_of_interest&key=${apiKey}';
                       final response = await http.get(Uri.parse(url));
+
                       if (response.statusCode == 200) {
                         final Map<String, dynamic> data =
                             jsonDecode(response.body);
+
                         if (data['status'] == 'OK' &&
                             data['results'].isNotEmpty) {
                           final place = data['results'][0];
                           final String name = place['name'];
+                          // log('Found place name: $name');
+                          // Fetching the formatted address
                           final String url =
                               'https://maps.googleapis.com/maps/api/geocode/json?latlng=${initPosition.target.latitude},${initPosition.target.longitude}&key=$apiKey&language=th';
                           final response = await http.get(Uri.parse(url));
+                          // log('Geocode response status code: ${response.statusCode}');
+
                           if (response.statusCode == 200) {
                             final Map<String, dynamic> data =
                                 jsonDecode(response.body);
@@ -594,6 +628,18 @@ class _EditProfileUserpageState extends State<EditProfileUserpage> {
                               final String formattedAddress =
                                   place['formatted_address'];
                               log('Name: $name, Formatted Address: $formattedAddress');
+
+                              // Log city name from the formatted address
+                              String cityName = '';
+                              for (var component
+                                  in place['address_components']) {
+                                if (component['types'].contains('locality')) {
+                                  cityName = component['long_name'];
+                                  break;
+                                }
+                              }
+                              // log('City Name: $cityName');
+
                               List<String> components =
                                   formattedAddress.trim().split(' ');
                               List<String> fixComponents =
@@ -603,9 +649,12 @@ class _EditProfileUserpageState extends State<EditProfileUserpage> {
                             }
                           }
                         } else {
+                          log('No point of interest found!');
+                          // Similar handling for geocode request if no places are found
                           final String url =
                               'https://maps.googleapis.com/maps/api/geocode/json?latlng=${initPosition.target.latitude},${initPosition.target.longitude}&key=$apiKey&language=th';
                           final response = await http.get(Uri.parse(url));
+                          log('Geocode response status code: ${response.statusCode}'); // Log geocode response status
                           if (response.statusCode == 200) {
                             final Map<String, dynamic> data =
                                 jsonDecode(response.body);
@@ -623,7 +672,6 @@ class _EditProfileUserpageState extends State<EditProfileUserpage> {
                               log(addressCtl.text);
                             }
                           }
-                          log('No point of interest found!');
                         }
                       }
                     }
