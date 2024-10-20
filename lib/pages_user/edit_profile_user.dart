@@ -378,7 +378,6 @@ class _EditProfileUserpageState extends State<EditProfileUserpage> {
       "address": addressCtl.text.isNotEmpty ? addressCtl.text : '',
       "lat": currentLocation?.latitude ?? 0.0, // ค่าเริ่มต้นเป็น 0.0 ถ้า null
       "lng": currentLocation?.longitude ?? 0.0, // ค่าเริ่มต้นเป็น 0.0 ถ้า null
-      "password": user[0].password ?? '', // ให้ค่าเริ่มต้นถ้า null
       "picture": pictureUrl ?? '', // ให้ค่าเริ่มต้นถ้า null
     };
 

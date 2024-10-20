@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:developer';
+import 'dart:io';
 import 'dart:math' hide log;
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
@@ -14,6 +15,7 @@ import 'package:hermes_app/config/config.dart';
 import 'package:hermes_app/models/response/order_firebase_res.dart';
 import 'package:hermes_app/pages_rider/home_rider.dart';
 import 'package:http/http.dart' as http;
+import 'package:image_picker/image_picker.dart';
 import 'package:intl/date_symbol_data_local.dart';
 
 class StatusRider extends StatefulWidget {
@@ -44,8 +46,11 @@ class _StatuspageState extends State<StatusRider> {
   late LatLng destination;
   late LatLng pickup;
 
-  var distance;
-  var duration;
+  final ImagePicker picker = ImagePicker();
+  XFile? image;
+
+  String distance = '';
+  String duration = '';
   bool distanceAccpet = false;
 
   CameraPosition initPosition = const CameraPosition(
@@ -70,150 +75,199 @@ class _StatuspageState extends State<StatusRider> {
     return PopScope(
       canPop: false,
       child: Scaffold(
-        body: SingleChildScrollView(
-          child: Stack(
-            children: [
-              Column(
-                children: [
-                  Container(
-                    width: screenWidth,
-                    height: screenHeight * 0.35,
-                    decoration: const BoxDecoration(
-                      color: Color(0xFF2C262A),
-                      borderRadius: BorderRadius.only(
-                        bottomLeft: Radius.circular(18),
-                        bottomRight: Radius.circular(18),
+        body: Stack(
+          children: [
+            Column(
+              children: [
+                Container(
+                  width: screenWidth,
+                  height: screenHeight * 0.35,
+                  decoration: const BoxDecoration(
+                    color: Color(0xFF2C262A),
+                    borderRadius: BorderRadius.only(
+                      bottomLeft: Radius.circular(18),
+                      bottomRight: Radius.circular(18),
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(20, 80, 20, 0),
+                        child: Center(
+                          child: Image.asset(
+                            'assets/images/Logo_status.png',
+                            width: screenWidth * 0.7,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            Padding(
+              padding: EdgeInsets.fromLTRB(
+                screenWidth * 0.045,
+                screenHeight * 0.28,
+                screenWidth * 0.045,
+                0,
+              ),
+              child: Container(
+                width: screenWidth,
+                height: screenHeight,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE8E8E8),
+                  borderRadius: BorderRadius.circular(18),
+                ),
+              ),
+            ),
+            Padding(
+              padding: EdgeInsets.fromLTRB(
+                screenWidth * 0.1,
+                screenHeight * 0.3,
+                screenWidth * 0.1,
+                0,
+              ),
+              child: SizedBox(
+                width: screenWidth * 0.8,
+                height: screenHeight * 0.25,
+                child: GoogleMap(
+                  mapType: MapType.normal,
+                  initialCameraPosition: initPosition,
+                  myLocationEnabled: false,
+                  markers: _markers,
+                  polylines: _polylines,
+                  onMapCreated: (GoogleMapController controller) {
+                    mapController = controller;
+                    Future.delayed(const Duration(milliseconds: 200), () {
+                      _fitAllMarkers();
+                    });
+                  },
+                  zoomGesturesEnabled: true,
+                  scrollGesturesEnabled: true,
+                  zoomControlsEnabled: true,
+                  myLocationButtonEnabled: false,
+                ),
+              ),
+            ),
+            Container(
+              margin: EdgeInsets.fromLTRB(0, screenHeight * 0.56, 0, 0),
+              child: SingleChildScrollView(
+                child: Column(
+                  children: [
+                    Padding(
+                      padding: EdgeInsets.fromLTRB(
+                        screenWidth * 0.1,
+                        0,
+                        screenWidth * 0.1,
+                        0,
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text('สถานะการจัดส่ง',
+                              style: TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                              )),
+                          Row(
+                            children: [
+                              distance != null
+                                  ? Text(distance.toString(),
+                                      style: const TextStyle(
+                                        fontSize: 20,
+                                        fontWeight: FontWeight.bold,
+                                      ))
+                                  : const CircularProgressIndicator(),
+                              SizedBox(
+                                width: screenWidth * 0.02,
+                              ),
+                              duration != null
+                                  ? Text(duration.toString(),
+                                      style: const TextStyle(
+                                        fontSize: 20,
+                                        fontWeight: FontWeight.bold,
+                                      ))
+                                  : const CircularProgressIndicator(),
+                            ],
+                          ),
+                        ],
                       ),
                     ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(20, 80, 20, 0),
-                          child: Center(
-                            child: Image.asset(
-                              'assets/images/Logo_status.png',
-                              width: screenWidth * 0.7,
+                    Padding(
+                      padding: EdgeInsets.fromLTRB(
+                        screenWidth * 0.1,
+                        0,
+                        screenWidth * 0.1,
+                        0,
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceAround,
+                        children: [
+                          _buildStatusStep(
+                              'ไรเดอร์\nรับงาน', Icons.inbox, true),
+                          _buildConnectorLine(true),
+                          _buildStatusStep('รอไรเดอร์\nมารับสินค้า',
+                              Icons.directions_bike, true),
+                          _buildConnectorLine(false),
+                          _buildStatusStep('รับสินค้าแล้ว\nกำลังเดินทาง',
+                              Icons.local_shipping, false),
+                          _buildConnectorLine(false),
+                          _buildStatusStep(
+                              'ส่งสินค้า\nเสร็จสิ้น', Icons.done_all, false),
+                        ],
+                      ),
+                    ),
+                    Padding(
+                      padding: EdgeInsets.fromLTRB(
+                        screenWidth * 0.1,
+                        0,
+                        screenWidth * 0.1,
+                        0,
+                      ),
+                      child: Padding(
+                        padding:
+                            EdgeInsets.fromLTRB(0, 0, 0, screenHeight * 0.05),
+                        child: Container(
+                          width: screenWidth * 0.9,
+                          height: screenHeight * 0.3,
+                          decoration: BoxDecoration(
+                            border: Border.all(color: Colors.black, width: 1),
+                            borderRadius: BorderRadius.circular(8.0),
+                          ),
+                          child: InkWell(
+                            onTap: imagePicker,
+                            child: Center(
+                              // Center the image within the container
+                              child: (image != null)
+                                  ? Image.file(
+                                      File(image!.path),
+                                      fit: BoxFit.contain,
+                                      width: screenWidth *
+                                          0.85, // Ensure the image doesn't overflow horizontally
+                                      height: screenHeight *
+                                          0.3, // Ensure the image doesn't overflow vertically
+                                    )
+                                  : Image.asset(
+                                      'assets/images/Logo_camera.png',
+                                      fit: BoxFit
+                                          .contain, // Make sure the SVG fits properly
+                                      width: screenWidth *
+                                          0.85, // Same size for the SVG
+                                      height: screenHeight *
+                                          0.2, // Adjust the height for SVG
+                                    ),
                             ),
                           ),
                         ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              Padding(
-                padding: EdgeInsets.fromLTRB(
-                  screenWidth * 0.045,
-                  screenHeight * 0.28,
-                  screenWidth * 0.045,
-                  0,
-                ),
-                child: Container(
-                  width: screenWidth,
-                  height: screenHeight * 0.7,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFE8E8E8),
-                    borderRadius: BorderRadius.circular(18),
-                  ),
-                ),
-              ),
-              if (isLoadingMap)
-                const Center(child: CircularProgressIndicator()),
-              Positioned(
-                top: screenHeight * 0.3,
-                left: (screenWidth * 0.5) - (screenWidth * 0.8 / 2),
-                child: SizedBox(
-                  width: screenWidth * 0.8,
-                  height: screenHeight * 0.25,
-                  child: GoogleMap(
-                    mapType: MapType.normal,
-                    initialCameraPosition: initPosition,
-                    myLocationEnabled: false,
-                    markers: _markers,
-                    polylines: _polylines,
-                    onMapCreated: (GoogleMapController controller) {
-                      mapController = controller;
-                      Future.delayed(const Duration(milliseconds: 200), () {
-                        _fitAllMarkers();
-                      });
-                    },
-                    zoomGesturesEnabled: true,
-                    scrollGesturesEnabled: true,
-                    zoomControlsEnabled: true,
-                    myLocationButtonEnabled: false,
-                  ),
-                ),
-              ),
-              Padding(
-                padding: EdgeInsets.fromLTRB(
-                  screenWidth * 0.07,
-                  screenHeight * 0.55,
-                  screenWidth * 0.1,
-                  0,
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text('สถานะการจัดส่ง',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                        )),
-                    Row(
-                      children: [
-                        Text(distance.toString(),
-                            style: const TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                            )),
-                        SizedBox(
-                          width: screenWidth * 0.02,
-                        ),
-                        Text(duration.toString(),
-                            style: const TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                            )),
-                      ],
+                      ),
                     ),
                   ],
                 ),
               ),
-              Padding(
-                padding: EdgeInsets.fromLTRB(
-                  screenWidth * 0.07,
-                  screenHeight * 0.6,
-                  screenWidth * 0.1,
-                  0,
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: [
-                    _buildStatusStep('ไรเดอร์\nรับงาน', Icons.inbox, true),
-                    _buildConnectorLine(true),
-                    _buildStatusStep(
-                        'ไรเดอร์\nรับสินค้า', Icons.directions_bike, true),
-                    _buildConnectorLine(false),
-                    _buildStatusStep(
-                        'กำลังจัดส่ง\nสินค้า', Icons.local_shipping, false),
-                    _buildConnectorLine(false),
-                    _buildStatusStep(
-                        'ส่งสินค้า\nเสร็จสิ้น', Icons.done_all, false),
-                  ],
-                ),
-              ),
-              Padding(
-                padding: EdgeInsets.fromLTRB(
-                  screenWidth * 0.07,
-                  screenHeight * 0.73,
-                  screenWidth * 0.1,
-                  0,
-                ),
-                child: const Text('TEST'),
-              )
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
@@ -257,6 +311,11 @@ class _StatuspageState extends State<StatusRider> {
       }).toList();
 
       Get.to(() => const HomeRiderpage());
+    } else {
+      await db.collection('order').doc(widget.docId).update({
+        'latRider': box.read('curLat'),
+        'lngRider': box.read('curLng'),
+      });
     }
   }
 
@@ -502,6 +561,98 @@ class _StatuspageState extends State<StatusRider> {
           color: isActive ? Colors.orange : Colors.black,
         ),
       ),
+    );
+  }
+
+  Future<void> imagePicker() async {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      isDismissible: true,
+      enableDrag: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(20),
+          bottom: Radius.circular(20),
+        ),
+      ),
+      backgroundColor: Colors.white,
+      clipBehavior: Clip.antiAliasWithSaveLayer,
+      builder: (context) {
+        return Padding(
+          padding: const EdgeInsets.only(left: 20, right: 20),
+          child: Container(
+            width: MediaQuery.of(context).size.width * 0.82,
+            padding: const EdgeInsets.symmetric(vertical: 20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  'เลือกรูปภาพ',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 10),
+                const Divider(),
+                ListTile(
+                  leading: const Icon(Icons.camera, size: 30),
+                  title: const Text('ถ่ายรูปจากกล้อง',
+                      style: TextStyle(fontSize: 16)),
+                  onTap: () async {
+                    Navigator.pop(context);
+                    try {
+                      final pickedFile =
+                          await picker.pickImage(source: ImageSource.camera);
+                      if (pickedFile != null) {
+                        setState(() {
+                          image = pickedFile;
+                        });
+                      }
+                    } catch (e) {
+                      log("Error picking image: $e");
+                    }
+                  },
+                ),
+                const Divider(),
+                ListTile(
+                  leading: const Icon(Icons.photo_library, size: 30),
+                  title: const Text('เลือกรูปจากแกลเลอรี',
+                      style: TextStyle(fontSize: 16)),
+                  onTap: () async {
+                    Navigator.pop(context);
+                    try {
+                      final pickedFile =
+                          await picker.pickImage(source: ImageSource.gallery);
+                      if (pickedFile != null) {
+                        setState(() {
+                          image = pickedFile;
+                        });
+                      }
+                    } catch (e) {
+                      log("Error picking image: $e");
+                    }
+                  },
+                ),
+                const Divider(),
+                const SizedBox(height: 10),
+                TextButton(
+                  onPressed: () {
+                    Navigator.pop(context);
+                  },
+                  child: const Text(
+                    'ปิด',
+                    style: TextStyle(
+                      fontSize: 20,
+                      color: Color(0xFFFF7723),
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 10),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }
