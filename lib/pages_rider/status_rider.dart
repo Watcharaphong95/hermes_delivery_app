@@ -4,6 +4,7 @@ import 'dart:developer';
 import 'dart:io';
 import 'dart:math' hide log;
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_polyline_points/flutter_polyline_points.dart';
@@ -46,6 +47,8 @@ class _StatuspageState extends State<StatusRider> {
   late LatLng destination;
   late LatLng pickup;
 
+  bool _isLoading = false;
+  String pictureUrl = '';
   final ImagePicker picker = ImagePicker();
   XFile? image;
 
@@ -58,6 +61,10 @@ class _StatuspageState extends State<StatusRider> {
     zoom: 15,
   );
 
+  int _activeButtonIndex = 0;
+
+  double screenWidth = 0;
+  double screenHeight = 0;
   @override
   void initState() {
     super.initState();
@@ -69,8 +76,8 @@ class _StatuspageState extends State<StatusRider> {
 
   @override
   Widget build(BuildContext context) {
-    double screenWidth = MediaQuery.of(context).size.width;
-    double screenHeight = MediaQuery.of(context).size.height;
+    screenWidth = MediaQuery.of(context).size.width;
+    screenHeight = MediaQuery.of(context).size.height;
 
     return PopScope(
       canPop: false,
@@ -205,17 +212,38 @@ class _StatuspageState extends State<StatusRider> {
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceAround,
                         children: [
+                          _buildStatusStep('ไรเดอร์\nรับงาน', Icons.inbox,
+                              int.parse(orders[0].status) >= 1),
+                          _buildConnectorLine(int.parse(orders[0].status) >= 2),
                           _buildStatusStep(
-                              'ไรเดอร์\nรับงาน', Icons.inbox, true),
-                          _buildConnectorLine(true),
-                          _buildStatusStep('รอไรเดอร์\nมารับสินค้า',
-                              Icons.directions_bike, true),
-                          _buildConnectorLine(false),
-                          _buildStatusStep('รับสินค้าแล้ว\nกำลังเดินทาง',
-                              Icons.local_shipping, false),
-                          _buildConnectorLine(false),
+                              'รอไรเดอร์\nมารับสินค้า',
+                              Icons.directions_bike,
+                              int.parse(orders[0].status) >= 2),
+                          _buildConnectorLine(int.parse(orders[0].status) >= 3),
                           _buildStatusStep(
-                              'ส่งสินค้า\nเสร็จสิ้น', Icons.done_all, false),
+                              'รับสินค้าแล้ว\nกำลังเดินทาง',
+                              Icons.local_shipping,
+                              int.parse(orders[0].status) >= 3),
+                          _buildConnectorLine(int.parse(orders[0].status) >= 4),
+                          _buildStatusStep('ส่งสินค้า\nเสร็จสิ้น',
+                              Icons.done_all, int.parse(orders[0].status) >= 4),
+                        ],
+                      ),
+                    ),
+                    Padding(
+                      padding: EdgeInsets.fromLTRB(
+                          0, screenHeight * 0.01, 0, screenHeight * 0.01),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          _buildStatusButton(2, 'รอไรเดอร์\nมารับสินค้า',
+                              int.parse(orders[0].status) >= 1),
+                          const SizedBox(width: 8),
+                          _buildStatusButton(3, 'ไรเดอร์รับ\nสินค้า',
+                              int.parse(orders[0].status) >= 2),
+                          const SizedBox(width: 8),
+                          _buildStatusButton(4, 'ส่งสินค้า\nเสร็จสิ้น',
+                              int.parse(orders[0].status) >= 3),
                         ],
                       ),
                     ),
@@ -226,40 +254,45 @@ class _StatuspageState extends State<StatusRider> {
                         screenWidth * 0.1,
                         0,
                       ),
-                      child: Padding(
-                        padding:
-                            EdgeInsets.fromLTRB(0, 0, 0, screenHeight * 0.05),
-                        child: Container(
-                          width: screenWidth * 0.9,
-                          height: screenHeight * 0.3,
-                          decoration: BoxDecoration(
-                            border: Border.all(color: Colors.black, width: 1),
-                            borderRadius: BorderRadius.circular(8.0),
+                      child: Container(
+                        width: screenWidth * 0.9,
+                        height: screenHeight * 0.3,
+                        decoration: BoxDecoration(
+                          border: Border.all(color: Colors.black, width: 1),
+                          borderRadius: BorderRadius.circular(8.0),
+                        ),
+                        child: InkWell(
+                          onTap: imagePicker,
+                          child: Center(
+                            // Center the image within the container
+                            child: (_activeButtonIndex == 2)
+                                ? showImagePerStaus(screenWidth, screenHeight,
+                                    _activeButtonIndex)
+                                : (_activeButtonIndex == 3)
+                                    ? showImagePerStaus(screenWidth,
+                                        screenHeight, _activeButtonIndex)
+                                    : (_activeButtonIndex == 4)
+                                        ? showImagePerStaus(screenWidth,
+                                            screenHeight, _activeButtonIndex)
+                                        : noImagePerStatus(
+                                            screenWidth, screenHeight),
                           ),
-                          child: InkWell(
-                            onTap: imagePicker,
-                            child: Center(
-                              // Center the image within the container
-                              child: (image != null)
-                                  ? Image.file(
-                                      File(image!.path),
-                                      fit: BoxFit.contain,
-                                      width: screenWidth *
-                                          0.85, // Ensure the image doesn't overflow horizontally
-                                      height: screenHeight *
-                                          0.3, // Ensure the image doesn't overflow vertically
-                                    )
-                                  : Image.asset(
-                                      'assets/images/Logo_camera.png',
-                                      fit: BoxFit
-                                          .contain, // Make sure the SVG fits properly
-                                      width: screenWidth *
-                                          0.85, // Same size for the SVG
-                                      height: screenHeight *
-                                          0.2, // Adjust the height for SVG
-                                    ),
-                            ),
-                          ),
+                        ),
+                      ),
+                    ),
+                    Padding(
+                      padding:
+                          EdgeInsets.symmetric(vertical: screenHeight * 0.02),
+                      child: SizedBox(
+                        width: screenWidth * 0.5,
+                        height: screenHeight * 0.06,
+                        child: FilledButton(
+                          onPressed: addPicturePerStatus,
+                          style: FilledButton.styleFrom(
+                              backgroundColor: Colors.orange,
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(5))),
+                          child: const Text('TEST'),
                         ),
                       ),
                     ),
@@ -306,6 +339,8 @@ class _StatuspageState extends State<StatusRider> {
 
     pickup = LatLng(orders[0].latSender!, orders[0].lngSender!);
     destination = LatLng(orders[0].latReceiver!, orders[0].lngReceiver!);
+
+    _activeButtonIndex = int.parse(orders[0].status);
 
     for (var order in orders) {
       riders.add(LatLng(order.latRider!, order.lngRider!));
@@ -575,7 +610,7 @@ class _StatuspageState extends State<StatusRider> {
           textAlign: TextAlign.center,
           style: TextStyle(
             fontSize: 12,
-            color: isActive ? Colors.black : Colors.grey,
+            color: isActive ? Colors.black : Colors.black,
             fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
           ),
         ),
@@ -592,6 +627,98 @@ class _StatuspageState extends State<StatusRider> {
           color: isActive ? Colors.orange : Colors.black,
         ),
       ),
+    );
+  }
+
+  Widget _buildStatusButton(int index, String text, bool disable) {
+    log(disable.toString());
+    bool isActive = _activeButtonIndex == index;
+    log(_activeButtonIndex.toString());
+    return ElevatedButton(
+      onPressed: !disable
+          ? null
+          : () {
+              setState(() {
+                _activeButtonIndex = index; // Update the active button index
+              });
+            },
+      style: ElevatedButton.styleFrom(
+        backgroundColor: !disable
+            ? Colors.orange[200]
+            : isActive
+                ? Colors.orange
+                : Colors.grey, // Change color based on active state
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(24),
+        ),
+        // padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+      ),
+      child: Text(
+        text,
+        textAlign: TextAlign.center,
+        style: TextStyle(
+          color: !disable
+              ? Colors.black38
+              : isActive
+                  ? Colors.white
+                  : Colors.black54, // Text color based on active state
+          fontSize: 16,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+    );
+  }
+
+  Image showImagePerStaus(double screenWidth, double screenHeight, int status) {
+    if (orders[0].picture != '' && status == 2) {
+      setState(() {});
+      return Image.network(
+        orders[0].picture, fit: BoxFit.contain,
+        width: screenWidth *
+            0.85, // Ensure the image doesn't overflow horizontally
+        height: screenHeight * 0.3,
+      );
+    } else if (orders[0].picture_2 != '' && status == 3) {
+      setState(() {});
+      return Image.network(
+        orders[0].picture_2, fit: BoxFit.contain,
+        width: screenWidth *
+            0.85, // Ensure the image doesn't overflow horizontally
+        height: screenHeight * 0.3,
+      );
+    } else if (orders[0].picture_3 != '' && status == 4) {
+      setState(() {});
+      return Image.network(
+        orders[0].picture_3, fit: BoxFit.contain,
+        width: screenWidth *
+            0.85, // Ensure the image doesn't overflow horizontally
+        height: screenHeight * 0.3,
+      );
+    } else if (image != null) {
+      return Image.file(
+        File(image!.path),
+        fit: BoxFit.contain,
+        width: screenWidth *
+            0.85, // Ensure the image doesn't overflow horizontally
+        height:
+            screenHeight * 0.3, // Ensure the image doesn't overflow vertically
+      );
+    } else {
+      return Image.asset(
+        'assets/images/Logo_camera.png',
+        fit: BoxFit.contain, // Make sure the SVG fits properly
+        width: screenWidth * 0.85, // Same size for the SVG
+        height: screenHeight * 0.2, // Adjust the height for SVG
+      );
+    }
+  }
+
+  Image noImagePerStatus(double screenWidth, double screenHeight) {
+    return Image.asset(
+      'assets/images/Logo_camera.png',
+      fit: BoxFit.contain, // Make sure the SVG fits properly
+      width: screenWidth * 0.85, // Same size for the SVG
+      height: screenHeight * 0.2, // Adjust the height for SVG
     );
   }
 
@@ -685,5 +812,60 @@ class _StatuspageState extends State<StatusRider> {
         );
       },
     );
+  }
+
+  Future<void> addPicturePerStatus() async {
+    if (image == null) return;
+
+    showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: const Center(child: Text('ยืนยันรูปนี้?')),
+            content: Image.file(
+              File(image!.path), fit: BoxFit.contain,
+              width: screenWidth *
+                  0.85, // Ensure the image doesn't overflow horizontally
+              height: screenHeight * 0.3,
+            ),
+            actions: [FilledButton(onPressed: () {}, child: const Text('OK'))],
+          );
+        });
+
+    // setState(() {
+    //   _isLoading = true;
+    // });
+
+    // await imageUpload();
+    // var data;
+    // if (_activeButtonIndex == 2) {
+    //   data = {'picture_2': pictureUrl, 'status': 3};
+    // } else if (_activeButtonIndex == 3) {
+    //   data = {'picture_3': pictureUrl, 'status': 4};
+    // }
+
+    // await db.collection('order').doc(widget.docId).update(data);
+
+    // image = null;
+    // setState(() {
+    //   _isLoading = false;
+    // });
+  }
+
+  Future<void> imageUpload() async {
+    log(image!.path);
+    String fileName = DateTime.now().millisecondsSinceEpoch.toString();
+    Reference ref = FirebaseStorage.instance.ref();
+    Reference refUserProfile = ref.child('order');
+    Reference imageToUpload = refUserProfile.child(fileName);
+
+    try {
+      await imageToUpload.putFile(File(image!.path));
+      log('test');
+      pictureUrl = await imageToUpload.getDownloadURL();
+      log(pictureUrl);
+    } catch (e) {
+      log('Error!');
+    }
   }
 }

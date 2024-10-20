@@ -38,6 +38,7 @@ class _SendItemState extends State<SendItem> {
   final ImagePicker picker = ImagePicker();
   XFile? image;
   File? savedFile;
+  bool _isLoading = false;
 
   int uidReceiver = 0;
 
@@ -366,6 +367,11 @@ class _SendItemState extends State<SendItem> {
 
   Future<void> confirmSendItem() async {
     if (image == null) return;
+
+    setState(() {
+      _isLoading = true;
+    });
+
     await imageUpload();
 
     var res = await http.get(Uri.parse('$url/user/${receiverData[0].uid}'));
@@ -386,17 +392,21 @@ class _SendItemState extends State<SendItem> {
       'latSender': sender.lat,
       'lngSender': sender.lng,
       'detail': itemDetails.text,
-      'picture': pictureUrl,
+      'picture_2': pictureUrl,
       'status': 1,
       'riderRid': null,
       'latRider': null,
       'lngRider': null,
     };
 
-    db
+    await db
         .collection('order')
         .doc(DateTime.timestamp().millisecondsSinceEpoch.toString())
         .set(data);
+
+    setState(() {
+      _isLoading = false;
+    });
   }
 
   Future<void> imageUpload() async {
