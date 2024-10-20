@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:developer';
 import 'dart:math' hide log;
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:dotted_border/dotted_border.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_polyline_points/flutter_polyline_points.dart';
@@ -113,7 +114,7 @@ class _StatuspageState extends State<Statuspage> {
               ),
               child: Container(
                 width: screenWidth,
-                height: screenHeight * 0.7,
+                height: screenHeight * 1,
                 decoration: BoxDecoration(
                   color: const Color(0xFFE8E8E8),
                   borderRadius: BorderRadius.circular(18),
@@ -149,15 +150,273 @@ class _StatuspageState extends State<Statuspage> {
             Padding(
               padding: EdgeInsets.fromLTRB(
                 screenWidth * 0.07,
-                screenHeight * 0.57,
+                screenHeight * 0.58,
                 screenWidth * 0.1,
-                0,
+                screenWidth * 0.1,
               ),
               child: const Text("สถานะการจัดส่ง",
                   style: TextStyle(
-                    fontSize: 17,
+                    fontSize: 19,
                     fontWeight: FontWeight.bold,
                   )),
+            ),
+            Padding(
+              padding: EdgeInsets.fromLTRB(0, screenHeight * 0.64, 0, 0),
+              child: Row(
+                mainAxisAlignment:
+                    MainAxisAlignment.center, // Center the buttons
+                children: [
+                  Container(
+                    width: screenWidth * 0.12 + 10, // ขนาดของภาพ
+                    height: screenWidth * 0.12 + 10,
+                    decoration: const BoxDecoration(
+                      color: Color(0xffbfbdbc), // สีพื้นหลังเป็นสีเทา
+                      shape: BoxShape.circle, // รูปทรงเป็นวงกลม
+                    ),
+                    child: ClipOval(
+                      child: Image.asset(
+                        "assets/images/Waiting_For_Parcel.png",
+                        width: screenWidth * 0.12,
+                        height: screenWidth * 0.12,
+                        fit: BoxFit.cover,
+                      ),
+                    ),
+                  ),
+                  // เส้นตรงเชื่อม
+                  Container(
+                    width: screenWidth * 0.09, // ความกว้างของเส้น
+                    height: 4, // ความสูงของเส้น
+                    color: const Color(0xffbfbdbc), // สีของเส้น
+                  ),
+                  Container(
+                    width: screenWidth * 0.12 + 10,
+                    height: screenWidth * 0.12 + 10,
+                    decoration: const BoxDecoration(
+                      color: Color(0xffbfbdbc),
+                      shape: BoxShape.circle,
+                    ),
+                    child: ClipOval(
+                      child: Image.asset(
+                        "assets/images/Rider_Picks_Up_Parcel.png",
+                        width: screenWidth * 0.12,
+                        height: screenWidth * 0.12,
+                        fit: BoxFit.cover,
+                      ),
+                    ),
+                  ),
+                  // เส้นตรงเชื่อม
+                  Container(
+                    width: screenWidth * 0.09, // ความกว้างของเส้น
+                    height: 4, // ความสูงของเส้น
+                    color: const Color(0xffbfbdbc), // สีของเส้น
+                  ),
+                  Container(
+                    width: screenWidth * 0.12 + 10,
+                    height: screenWidth * 0.12 + 10,
+                    decoration: const BoxDecoration(
+                      color: Color(0xffbfbdbc),
+                      shape: BoxShape.circle,
+                    ),
+                    child: ClipOval(
+                      child: Image.asset(
+                        "assets/images/Shipping_Goods.png",
+                        width: screenWidth * 0.12,
+                        height: screenWidth * 0.12,
+                        fit: BoxFit.cover,
+                      ),
+                    ),
+                  ),
+                  // เส้นตรงเชื่อม
+                  Container(
+                    width: screenWidth * 0.09, // ความกว้างของเส้น
+                    height: 4, // ความสูงของเส้น
+                    color: const Color(0xffbfbdbc), // สีของเส้น
+                  ),
+                  Container(
+                    width: screenWidth * 0.12 + 10,
+                    height: screenWidth * 0.12 + 10,
+                    decoration: const BoxDecoration(
+                      color: Color(0xffbfbdbc),
+                      shape: BoxShape.circle,
+                    ),
+                    child: ClipOval(
+                      child: Image.asset(
+                        "assets/images/Received_The_Product.png",
+                        width: screenWidth * 0.12,
+                        height: screenWidth * 0.12,
+                        fit: BoxFit.cover,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Padding(
+              padding: EdgeInsets.fromLTRB(0, screenHeight * 0.72, 0, 0),
+              child: Row(
+                children: [
+                  Padding(
+                    padding: EdgeInsets.only(left: screenWidth * 0.08),
+                    child: SizedBox(
+                        width: screenWidth * 0.13,
+                        child: const Text(
+                          "รอไรเดอร์มารับสินค้า",
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        )),
+                  ),
+                  Padding(
+                    padding: EdgeInsets.only(left: screenWidth * 0.1),
+                    child: SizedBox(
+                        width: screenWidth * 0.15,
+                        child: const Text(
+                          "ไรเดอร์รับสินค้า",
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        )),
+                  ),
+                  Padding(
+                    padding: EdgeInsets.only(left: screenWidth * 0.09),
+                    child: SizedBox(
+                        width: screenWidth * 0.15,
+                        child: const Text(
+                          "กำลังจัดส่งสินค้า",
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        )),
+                  ),
+                  Padding(
+                    padding: EdgeInsets.only(left: screenWidth * 0.09),
+                    child: SizedBox(
+                        width: screenWidth * 0.13,
+                        child: const Text(
+                          "ส่งสินค้าเสร็จสิ้น",
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        )),
+                  ),
+                ],
+              ),
+            ),
+            Padding(
+              padding: EdgeInsets.fromLTRB(0, screenHeight * 0.79, 0, 0),
+              child: Row(
+                mainAxisAlignment:
+                    MainAxisAlignment.center, // Center the buttons
+                children: [
+                  Padding(
+                    padding:
+                        EdgeInsets.symmetric(horizontal: screenWidth * 0.01),
+                    child: SizedBox(
+                      width: screenWidth * 0.25,
+                      height: screenHeight * 0.06,
+                      child: FilledButton(
+                        onPressed: () {},
+                        child: const Text(
+                          "รอไรเดอร์มารับสินค้า",
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  Padding(
+                    padding:
+                        EdgeInsets.symmetric(horizontal: screenWidth * 0.01),
+                    child: SizedBox(
+                      width: screenWidth * 0.25,
+                      height: screenHeight * 0.06,
+                      child: FilledButton(
+                        onPressed: () {},
+                        child: const Text(
+                          "ไรเดอร์รับสินค้า",
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  Padding(
+                    padding:
+                        EdgeInsets.symmetric(horizontal: screenWidth * 0.01),
+                    child: SizedBox(
+                      width: screenWidth * 0.25,
+                      height: screenHeight * 0.06,
+                      child: FilledButton(
+                        onPressed: () {},
+                        child: const Text(
+                          "ส่งสินค้าเสร็จสิ้น",
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center, // Center the buttons
+              children: [
+                Padding(
+                  padding: EdgeInsets.fromLTRB(0, screenHeight * 0.9, 0, 0),
+                  child: DottedBorder(
+                    borderType: BorderType.RRect,
+                    radius: Radius.circular(8), // มุมโค้ง
+                    color: Colors.black,
+                    strokeWidth: 5, // ปรับความหนาของเส้นประ
+                    dashPattern: [20, 1], // ปรับความยาวและระยะห่างของเส้นประ
+                    child: Container(
+                      width: screenWidth * 0.8,
+                      height: screenHeight * 0.3,
+                      child: Padding(
+                        padding: const EdgeInsets.all(
+                            10), // ปรับขนาด padding ตามต้องการ
+                        child: Image.asset(
+                          "assets/images/Logo_camera.png",
+                          width: 30, // ปรับลดขนาดรูปภาพ
+                          height: 30, // ปรับลดขนาดรูปภาพ
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ],
         ),

@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'dart:developer';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
@@ -8,7 +7,6 @@ import 'package:get_storage/get_storage.dart';
 import 'package:hermes_app/config/config.dart';
 import 'package:hermes_app/models/select_user_all.dart';
 import 'package:hermes_app/models/user_login.dart';
-import 'package:hermes_app/navbar/navbottomRider.dart';
 import 'package:hermes_app/navbar/navbottomRider.dart';
 import 'package:hermes_app/navbar/navbuttomUser.dart';
 import 'package:hermes_app/pages_rider/home_rider.dart';
@@ -24,18 +22,30 @@ class LoginPage extends StatefulWidget {
 
 class _LoginPageState extends State<LoginPage> {
   final box = GetStorage();
-
   TextEditingController phoneCtl = TextEditingController();
   TextEditingController passwordCtl = TextEditingController();
   String url = '';
+  bool rememberMe = false; // ตัวแปรสำหรับจดจำผู้ใช้
+
+  @override
+  void initState() {
+    super.initState();
+    // โหลดข้อมูลหากผู้ใช้เลือก "จดจำฉัน"
+    bool? rememberMeValue = box.read('rememberMe');
+    if (rememberMeValue == true) {
+      rememberMe = true;
+      phoneCtl.text = box.read('savedPhone') ?? '';
+      passwordCtl.text = box.read('savedPassword') ?? ''; // ควรจัดการให้ปลอดภัย
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    // ขนาดของหน้าจอ
+    // Screen dimensions
     double screenWidth = MediaQuery.of(context).size.width;
     double screenHeight = MediaQuery.of(context).size.height;
     final keyboardHeight =
-        MediaQuery.of(context).viewInsets.bottom; // ความสูงของแป้นพิมพ์
+        MediaQuery.of(context).viewInsets.bottom; // Keyboard height
 
     return Scaffold(
       backgroundColor: const Color(0xFFE8E8E8),
@@ -88,11 +98,11 @@ class _LoginPageState extends State<LoginPage> {
               ],
             ),
             Positioned(
-              top: 450 - keyboardHeight, // ปรับตำแหน่งตามความสูงของแป้นพิมพ์
+              top: 450 - keyboardHeight,
               left: 25,
               right: 25,
               child: SizedBox(
-                width: MediaQuery.of(context).size.width - 50, // ลดความกว้าง
+                width: MediaQuery.of(context).size.width - 50,
                 height: 400,
                 child: Card(
                   color: Colors.white,
@@ -104,6 +114,7 @@ class _LoginPageState extends State<LoginPage> {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
+                        // Phone TextField
                         SizedBox(
                           height: 50,
                           child: Container(
@@ -124,13 +135,13 @@ class _LoginPageState extends State<LoginPage> {
                                     fontSize: 14,
                                     color: Color.fromARGB(97, 0, 0, 0)),
                                 border: InputBorder.none,
-                                contentPadding: EdgeInsets.symmetric(
-                                    vertical: 15, horizontal: 10),
                               ),
                             ),
                           ),
                         ),
                         const SizedBox(height: 25),
+
+                        // Password TextField
                         SizedBox(
                           height: 50,
                           child: Container(
@@ -147,12 +158,12 @@ class _LoginPageState extends State<LoginPage> {
                                     fontSize: 14,
                                     color: Color.fromARGB(97, 0, 0, 0)),
                                 border: InputBorder.none,
-                                contentPadding: EdgeInsets.symmetric(
-                                    vertical: 15, horizontal: 10),
                               ),
                             ),
                           ),
                         ),
+                        const SizedBox(height: 5),
+
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
@@ -160,14 +171,19 @@ class _LoginPageState extends State<LoginPage> {
                               child: Row(
                                 children: [
                                   Checkbox(
-                                      value: false,
-                                      onChanged: (bool? value) {}),
+                                      value: rememberMe,
+                                      onChanged: (bool? value) {
+                                        setState(() {
+                                          rememberMe =
+                                              value ?? false; // อัปเดตค่าตัวแปร
+                                        });
+                                      }),
                                   const Text('จดจำฉัน',
                                       style: TextStyle(fontSize: 12)),
                                 ],
                               ),
                             ),
-                            const SizedBox(width: 8), // เพิ่มระยะห่างถ้าต้องการ
+                            const SizedBox(width: 8),
                             const Text(
                               'ลืมรหัสผ่าน?',
                               style:
@@ -175,13 +191,13 @@ class _LoginPageState extends State<LoginPage> {
                             ),
                           ],
                         ),
-                        SizedBox(height: screenHeight * 0.016),
+
+                        SizedBox(height: screenHeight * 0.012),
                         SizedBox(
                           width: screenWidth * 0.8,
                           height: screenHeight * 0.06,
                           child: Padding(
-                            padding: const EdgeInsets.only(
-                                left: 8.0), // ระยะห่างจาก TextField
+                            padding: const EdgeInsets.only(left: 8.0),
                             child: ElevatedButton(
                               onPressed: () {
                                 login();
@@ -236,6 +252,9 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   void login() async {
+    String phoneError = '';
+    String passwordError = '';
+
     if (phoneCtl.text.isNotEmpty && passwordCtl.text.isNotEmpty) {
       UserLogin userlogin = UserLogin(
         phone: phoneCtl.text,
@@ -253,18 +272,34 @@ class _LoginPageState extends State<LoginPage> {
           headers: {"Content-Type": "application/json; charset=utf-8"},
         );
 
+        log('Response status code: ${response.statusCode}');
+        log('Response body: ${response.body}'); // เพิ่มการ log response body เพื่อดูว่ามีข้อมูลอะไรที่ถูกส่งกลับมา
+
         if (response.statusCode == 200) {
-          log(response.body);
+          log('Login request successful.');
           var user = selectUserAllFromJson(response.body);
           log('Login success: ${user.phone}');
 
+          // บันทึกข้อมูลใน GetStorage
           box.write('phone', user.phone);
           if (user.uid != null) {
             box.write('uid', user.uid.toString());
           } else {
             box.write('uid', user.rid.toString());
           }
-          log(box.read('uid'));
+
+          // บันทึกสถานะ "จดจำฉัน"
+          if (rememberMe) {
+            box.write('rememberMe', true);
+            box.write('savedPhone', user.phone);
+            box.write('savedPassword', user.password);
+          } else {
+            box.remove('rememberMe');
+            box.remove('savedPhone');
+            box.remove('savedPassword');
+          }
+
+          // นำผู้ใช้ไปยังหน้า Nav ตามประเภทของ user
           if (user.type == 1) {
             Get.to(() => NavbuttompageUser(
                   selectedPage: 0,
@@ -277,25 +312,86 @@ class _LoginPageState extends State<LoginPage> {
                 ));
           }
         } else {
-          log('Login failed: ${response.statusCode}');
-          // แสดงข้อความแจ้งเตือนเมื่อเข้าสู่ระบบล้มเหลว
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Invalid phone or password')),
-          );
+          // กรณีที่ status code ไม่ใช่ 200
+          showErrorDialog(
+              'หมายเลขโทรศัพท์หรือรหัสผ่านไม่ถูกต้อง\nกรุณาลองอีกครั้ง');
+          log('Login failed with status code: ${response.statusCode}');
         }
-      } catch (error) {
-        log('Error during login: $error');
-        // แสดงข้อความแจ้งเตือนเมื่อเกิดข้อผิดพลาด
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-              content: Center(child: Text('Invalid phone or password'))),
-        );
+      } catch (e) {
+        // จับ error และ log ข้อความเพื่อดูรายละเอียด
+        log('Login error: $e');
+        showErrorDialog('เกิดข้อผิดพลาดในการเชื่อมต่อ: $e');
       }
     } else {
-      // แสดงข้อความแจ้งเตือนหากกรอกข้อมูลไม่ครบ
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter phone and password')),
-      );
+      if (phoneCtl.text.isEmpty) {
+        phoneError += 'กรุณากรอกหมายเลขโทรศัพท์\n';
+      }
+      if (passwordCtl.text.isEmpty) {
+        passwordError += 'กรุณากรอกรหัสผ่าน';
+      }
+      showErrorDialog(phoneError + passwordError);
     }
+  }
+
+  void showErrorDialog(String message) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Container(
+            width: MediaQuery.of(context).size.width * 0.8,
+            padding: const EdgeInsets.all(0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                const Padding(
+                  padding: EdgeInsets.fromLTRB(0, 30, 10, 0),
+                  child: Center(
+                    child: Text(
+                      "ข้อผิดพลาด!", // "Error"
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Padding(
+                  padding: const EdgeInsets.all(5),
+                  child: Text(message, textAlign: TextAlign.center),
+                ),
+                const SizedBox(height: 10),
+                const Divider(),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(0, 5, 0, 10),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: <Widget>[
+                      TextButton(
+                        onPressed: () {
+                          Navigator.of(context).pop();
+                        },
+                        child: const Text(
+                          "ตกลง", // "OK"
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFFFF7723), // สีส้ม
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 }

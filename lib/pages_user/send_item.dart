@@ -219,7 +219,7 @@ class _SendItemState extends State<SendItem> {
                           borderRadius: BorderRadius.circular(8.0),
                         ),
                         child: InkWell(
-                          onTap: imagePicker,
+                          onTap: addProfileImage,
                           child: Center(
                             // Center the image within the container
                             child: (image != null)
@@ -301,67 +301,96 @@ class _SendItemState extends State<SendItem> {
     setState(() {});
   }
 
-  void imagePicker() {
-    showDialog(
-        context: context,
-        builder: (BuildContext context) {
-          return AlertDialog(
-            title: const Center(child: Text('เลือกวิธีเพิ่มรูปภาพ')),
-            content: SizedBox(
-              width: screenWidth * 0.5, // Adjust width
-              height: screenHeight * 0.5, // Adjust height
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: [
-                  InkWell(
-                      onTap: imageFromCamera,
-                      child: SvgPicture.asset(
-                        'assets/images/cameraAdd.svg',
-                        width: screenWidth * 0.3,
-                      )),
-                  SizedBox(
-                    width: screenWidth * 0.07,
+  Future<void> addProfileImage() async {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      isDismissible: true,
+      enableDrag: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(20),
+          bottom: Radius.circular(20),
+        ),
+      ),
+      backgroundColor: Colors.white,
+      clipBehavior: Clip.antiAliasWithSaveLayer,
+      builder: (context) {
+        return Padding(
+          padding: const EdgeInsets.only(left: 20, right: 20),
+          child: Container(
+            width: MediaQuery.of(context).size.width * 0.82,
+            padding: const EdgeInsets.symmetric(vertical: 20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  'เลือกรูปภาพ',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 10),
+                const Divider(),
+                ListTile(
+                  leading: const Icon(Icons.camera, size: 30),
+                  title: const Text('ถ่ายรูปจากกล้อง',
+                      style: TextStyle(fontSize: 16)),
+                  onTap: () async {
+                    Navigator.pop(context);
+                    try {
+                      final pickedFile =
+                          await picker.pickImage(source: ImageSource.camera);
+                      if (pickedFile != null) {
+                        setState(() {
+                          image = pickedFile;
+                        });
+                      }
+                    } catch (e) {
+                      log("Error picking image: $e");
+                    }
+                  },
+                ),
+                const Divider(),
+                ListTile(
+                  leading: const Icon(Icons.photo_library, size: 30),
+                  title: const Text('เลือกรูปจากแกลเลอรี',
+                      style: TextStyle(fontSize: 16)),
+                  onTap: () async {
+                    Navigator.pop(context);
+                    try {
+                      final pickedFile =
+                          await picker.pickImage(source: ImageSource.gallery);
+                      if (pickedFile != null) {
+                        setState(() {
+                          image = pickedFile;
+                        });
+                      }
+                    } catch (e) {
+                      log("Error picking image: $e");
+                    }
+                  },
+                ),
+                const Divider(),
+                const SizedBox(height: 10),
+                TextButton(
+                  onPressed: () {
+                    Navigator.pop(context);
+                  },
+                  child: const Text(
+                    'ปิด',
+                    style: TextStyle(
+                      fontSize: 20,
+                      color: Color(0xFFFF7723),
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
-                  InkWell(
-                      onTap: imageFromFile,
-                      child: SvgPicture.asset(
-                        'assets/images/fileAdd.svg',
-                        width: screenWidth * 0.3,
-                      )),
-                ],
-              ),
+                ),
+                const SizedBox(height: 10),
+              ],
             ),
-            actions: [
-              Center(
-                child: FilledButton(
-                    onPressed: () {
-                      Navigator.pop(context);
-                    },
-                    child: const Text('ปิด')),
-              )
-            ],
-          );
-        });
-  }
-
-  Future<void> imageFromCamera() async {
-    image = await picker.pickImage(source: ImageSource.camera);
-    if (image != null) {
-      log(image!.path);
-    } else {
-      log('No image');
-    }
-    setState(() {});
-  }
-
-  Future<void> imageFromFile() async {
-    image = await picker.pickImage(source: ImageSource.gallery);
-    if (image != null) {
-      log(image!.path);
-    } else {
-      log('No image');
-    }
-    setState(() {});
+          ),
+        );
+      },
+    );
   }
 
   Future<void> confirmSendItem() async {

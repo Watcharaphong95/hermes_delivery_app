@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:developer';
 import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter/material.dart';
 import 'package:geocoding/geocoding.dart';
@@ -37,6 +38,7 @@ class _EditProfileUserpageState extends State<EditProfileUserpage> {
   double screenWidth = 0, screenHeight = 0;
   final ImagePicker picker = ImagePicker();
   XFile? image;
+  File? savedFile;
 
   var db = FirebaseFirestore.instance;
 
@@ -85,6 +87,7 @@ class _EditProfileUserpageState extends State<EditProfileUserpage> {
     screenHeight = MediaQuery.of(context).size.height;
 
     return Scaffold(
+      backgroundColor: Colors.white,
       body: SingleChildScrollView(
         child: user.isEmpty
             ? const Center(child: CircularProgressIndicator())
@@ -130,7 +133,7 @@ class _EditProfileUserpageState extends State<EditProfileUserpage> {
                       ],
                     ),
                   ),
-                  const SizedBox(height: 10),
+                  SizedBox(height: screenHeight * 0.04),
                   Stack(
                     children: [
                       // Container สำหรับการแก้ไขโปรไฟล์
@@ -320,22 +323,42 @@ class _EditProfileUserpageState extends State<EditProfileUserpage> {
                       // รูปโปรไฟล์
                       Positioned(
                         top: -screenHeight * 0.001,
-                        left: (screenWidth * 0.85 - 150) / 2,
+                        left: (screenWidth * 0.85 - 155) / 2,
                         child: GestureDetector(
                           onTap: addProfileImage,
                           child: ClipOval(
-                            child: image != null
-                                ? Image.file(
-                                    File(image!.path),
-                                    width: screenWidth * 0.38,
-                                    height: screenWidth * 0.38,
-                                    fit: BoxFit.cover,
-                                  )
-                                : Image.asset(
-                                    'assets/images/Logo_register.png',
-                                    width: screenWidth * 0.38,
-                                    height: screenWidth * 0.38,
-                                  ),
+                            child: (user.isNotEmpty &&
+                                    user[0].picture.isNotEmpty &&
+                                    !user[0].picture.contains(
+                                        "ll")) // ตรวจสอบว่ามีรูปภาพที่ไม่เป็น "ll"
+                                ? (user[0].picture.startsWith('http')
+                                    ? Image.network(
+                                        user[0]
+                                            .picture, // ใช้ Image.network ถ้าเป็น URL ที่ถูกต้อง
+                                        width: screenWidth * 0.38,
+                                        height: screenWidth * 0.38,
+                                        fit: BoxFit.cover,
+                                      )
+                                    : Image.asset(
+                                        user[0]
+                                            .picture, // ใช้ Image.asset ถ้าข้อมูลเป็น Asset
+                                        width: screenWidth * 0.38,
+                                        height: screenWidth * 0.38,
+                                        fit: BoxFit.cover,
+                                      ))
+                                : image != null
+                                    ? Image.file(
+                                        File(image!.path),
+                                        width: screenWidth * 0.38,
+                                        height: screenWidth * 0.38,
+                                        fit: BoxFit.cover,
+                                      )
+                                    : Image.asset(
+                                        'assets/images/Logo_register.png',
+                                        width: screenWidth * 0.38,
+                                        height: screenWidth * 0.38,
+                                        fit: BoxFit.cover,
+                                      ),
                           ),
                         ),
                       ),
@@ -371,80 +394,92 @@ class _EditProfileUserpageState extends State<EditProfileUserpage> {
     String? phone = box.read('phone');
     String? uid = box.read('uid');
 
-    // เตรียมข้อมูล JSON สำหรับการอัปเดต
+    // ตรวจสอบว่า user[0].picture มีค่า
+    if (user.isNotEmpty && user[0].picture.isNotEmpty) {
+      // ถ้ามีค่าให้กำหนดให้ image เป็น user[0].picture
+      pictureUrl = user[0].picture; // ใช้ URL ตรงๆ แทนการแปลงเป็น XFile
+    }
+
+    // ตรวจสอบว่า pictureUrl มีค่า
+    if (pictureUrl == null) {
+      log('Image is null or does not exist. Please select a valid image before updating the profile.');
+      return; // ออกจากฟังก์ชันถ้า pictureUrl เป็น null
+    }
+
+    log('User picture: $pictureUrl'); // แสดง URL ของภาพที่กำหนด
+
+    // จากนี้ไปจะเป็นการอัปเดตข้อมูลโปรไฟล์ตามปกติ
     var json = {
       "phone": phoneCtl.text.isNotEmpty ? phoneCtl.text : '',
       "name": nameCtl.text.isNotEmpty ? nameCtl.text : '',
       "address": addressCtl.text.isNotEmpty ? addressCtl.text : '',
-      "lat": currentLocation?.latitude ?? 0.0, // ค่าเริ่มต้นเป็น 0.0 ถ้า null
-      "lng": currentLocation?.longitude ?? 0.0, // ค่าเริ่มต้นเป็น 0.0 ถ้า null
-      "password": user[0].password ?? '', // ให้ค่าเริ่มต้นถ้า null
-      "picture": pictureUrl ?? '', // ให้ค่าเริ่มต้นถ้า null
+      "lat": currentLocation?.latitude ?? 0.0,
+      "lng": currentLocation?.longitude ?? 0.0,
+      "password": user[0].password ?? '',
+      "picture": pictureUrl!, // ใช้ URL ของภาพ
     };
 
-    // แสดงกล่องยืนยัน
     bool confirmUpdate = await showDialog<bool>(
           context: context,
           builder: (BuildContext context) {
             return Dialog(
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20), // รูปแบบมุม
+                borderRadius: BorderRadius.circular(20),
               ),
               child: Container(
-                width: screenWidth, // ปรับความกว้าง
-                padding: const EdgeInsets.all(0), // เว้นพื้นที่รอบ
+                width: MediaQuery.of(context).size.width * 0.8,
+                padding: const EdgeInsets.all(0),
                 child: Column(
-                  mainAxisSize:
-                      MainAxisSize.min, // ขนาดของคอลัมน์จะใช้พื้นที่ที่จำเป็น
+                  mainAxisSize: MainAxisSize.min,
                   children: <Widget>[
                     const Padding(
                       padding: EdgeInsets.fromLTRB(0, 30, 10, 0),
                       child: Center(
-                          child: Text(
-                        "ยืนยันการเปลี่ยนข้อมูล",
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
+                        child: Text(
+                          "ยืนยันการเปลี่ยนข้อมูล",
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
-                      )),
+                      ),
                     ),
-                    const SizedBox(height: 10), // เว้นพื้นที่
+                    const SizedBox(height: 10),
                     const Padding(
                       padding: EdgeInsets.all(5),
                       child: Text("คุณต้องการเปลี่ยนข้อมูลโปรไฟล์หรือไม่?"),
                     ),
-                    const SizedBox(height: 10), // เว้นพื้นที่
-                    const Divider(), // เพิ่มเส้นขั้น
+                    const SizedBox(height: 10),
+                    const Divider(),
                     Padding(
                       padding: const EdgeInsets.fromLTRB(0, 5, 0, 10),
                       child: Row(
-                        mainAxisAlignment:
-                            MainAxisAlignment.spaceEvenly, // จัดเรียงปุ่ม
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                         children: <Widget>[
                           TextButton(
                             onPressed: () {
-                              Navigator.of(context)
-                                  .pop(false); // ผู้ใช้กด "ยกเลิก"
+                              Navigator.of(context).pop(false);
                             },
                             child: const Text(
                               "ยกเลิก",
                               style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.black),
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.black,
+                              ),
                             ),
                           ),
                           TextButton(
                             onPressed: () {
-                              Navigator.of(context)
-                                  .pop(true); // ผู้ใช้กด "ยืนยัน"
+                              Navigator.of(context).pop(true);
                             },
                             child: const Text(
                               "ยืนยัน",
                               style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                  color: Color(0xFFFF7723)),
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFFFF7723),
+                              ),
                             ),
                           ),
                         ],
@@ -457,6 +492,27 @@ class _EditProfileUserpageState extends State<EditProfileUserpage> {
           },
         ) ??
         false;
+
+    if (confirmUpdate) {
+      try {
+        var response = await http.put(
+          Uri.parse('$url/user/update/$uid'),
+          headers: {"Content-Type": "application/json; charset=utf-8"},
+          body: jsonEncode(json),
+        );
+
+        if (response.statusCode == 200) {
+          log('Profile updated successfully!');
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (context) => const Profilepage()),
+          );
+        } else {
+          log('Failed to update profile: ${response.body}');
+        }
+      } catch (error) {
+        log('Error updating profile: $error');
+      }
+    }
   }
 
   Future<void> addProfileImage() async {

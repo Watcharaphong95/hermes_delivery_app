@@ -30,43 +30,6 @@ class _ListpageState extends State<ItemsList> {
   bool isReceived =
       true; // Track the active button (true for received, false for delivery)
 
-  // Sample data for cards
-  final List<Map<String, String>> receivedData = [
-    {
-      "สินค้า": "หนังสือ 'การเดินทางแห่งความฝัน'",
-      "ผู้ส่ง": "คุณสมชาย",
-      "ผู้รับ": "คุณสมศรี",
-      "เวลา": "15 ก.ย 2024 14.16"
-    },
-    {
-      "สินค้า": "เสื้อยืด 'แบรนด์ X'",
-      "ผู้ส่ง": "คุณสมจิตร",
-      "ผู้รับ": "คุณสมนึก",
-      "เวลา": "16 ก.ย 2024 10.30"
-    },
-    {
-      "สินค้า": "อุปกรณ์ออกกำลังกาย",
-      "ผู้ส่ง": "คุณสมปอง",
-      "ผู้รับ": "คุณสมหญิง",
-      "เวลา": "17 ก.ย 2024 09.45"
-    },
-  ];
-
-  final List<Map<String, String>> deliveryData = [
-    {
-      "สินค้า": "นาฬิกา 'แบรนด์ Y'",
-      "ผู้ส่ง": "คุณสมชาย",
-      "ผู้รับ": "คุณสมบัติ",
-      "เวลา": "18 ก.ย 2024 12.00"
-    },
-    {
-      "สินค้า": "ลำโพงบลูทูธ",
-      "ผู้ส่ง": "คุณสมชาย",
-      "ผู้รับ": "คุณสมศักดิ์",
-      "เวลา": "19 ก.ย 2024 13.15"
-    },
-  ];
-
   @override
   void initState() {
     super.initState();
@@ -86,6 +49,7 @@ class _ListpageState extends State<ItemsList> {
         listener.cancel();
       },
       child: Scaffold(
+        backgroundColor: Colors.white,
         body: SingleChildScrollView(
           child: Column(
             children: [
@@ -213,10 +177,16 @@ class _ListpageState extends State<ItemsList> {
                         const Padding(
                           padding: EdgeInsets.symmetric(vertical: 20.0),
                           child: Center(
-                            child: Text(
-                              'ไม่มีของที่ต้องรับ',
-                              style:
-                                  TextStyle(fontSize: 24, color: Colors.black),
+                            child: Padding(
+                              padding: EdgeInsets.all(18.0),
+                              child: Text(
+                                'ไม่มีของที่ต้องรับ',
+                                style: TextStyle(
+                                  fontSize: 30,
+                                  color: Color(0xFFBFBDBC),
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
                             ),
                           ),
                         )

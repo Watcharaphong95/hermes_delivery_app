@@ -22,6 +22,8 @@ class UserLogin {
         password: json["password"],
       );
 
+  get token => null;
+
   Map<String, dynamic> toJson() => {
         "phone": phone,
         "password": password,
