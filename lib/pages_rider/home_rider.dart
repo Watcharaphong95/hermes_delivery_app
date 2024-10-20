@@ -31,7 +31,6 @@ class _HomeRiderpageState extends State<HomeRiderpage> {
   double screenHeight = 0;
 
   final box = GetStorage();
-  PolylinePoints polylinePoints = PolylinePoints();
 
   var db = FirebaseFirestore.instance;
   late StreamSubscription listener;
@@ -40,9 +39,7 @@ class _HomeRiderpageState extends State<HomeRiderpage> {
 
   late CameraPosition initPosition;
 
-  Set<Marker> _markers = {};
-  final Set<Polyline> _polylines = {};
-  final Set<Marker> _marker = {};
+  final Set<Marker> _markers = {};
   late GoogleMapController mapController;
 
   late Stream<Position> currentPosition;
@@ -206,7 +203,7 @@ class _HomeRiderpageState extends State<HomeRiderpage> {
                       child: Padding(
                         padding: EdgeInsets.only(top: 20),
                         child: Text(
-                          "กรุณาค้นหาเบอร์\nผู้รับสินค้า",
+                          "ไม่มีออเดอร์ขณะนี้",
                           textAlign: TextAlign.center,
                           style: TextStyle(
                             fontSize: 30,
@@ -224,12 +221,6 @@ class _HomeRiderpageState extends State<HomeRiderpage> {
   }
 
   Future<void> tapOnOrderCard(OrderRes item) async {
-    _marker.clear;
-    _polylines.clear;
-    _addMarkerReceiver(item);
-    _addMarkerRider();
-    _addMarkerSender(item);
-
     double distanceToSender = Geolocator.distanceBetween(currentLatLng.latitude,
             currentLatLng.longitude, item.latSender!, item.lngSender!) /
         1000;
@@ -240,6 +231,10 @@ class _HomeRiderpageState extends State<HomeRiderpage> {
 
     log(distanceToReceiver.toString());
     log(distanceToSender.toString());
+    _markers.clear();
+    _addMarkerReceiver(item);
+    _addMarkerRider();
+    _addMarkerSender(item);
     showDialog(
       context: context,
       builder: (context) {
@@ -259,7 +254,6 @@ class _HomeRiderpageState extends State<HomeRiderpage> {
                       initialCameraPosition: initPosition,
                       myLocationEnabled: false,
                       markers: _markers,
-                      polylines: _polylines,
                       onMapCreated: (GoogleMapController controller) {
                         mapController = controller;
                         Future.delayed(const Duration(milliseconds: 200), () {
@@ -311,14 +305,19 @@ class _HomeRiderpageState extends State<HomeRiderpage> {
                   ),
                   FilledButton(
                     onPressed: () async {
-                      await db.collection('order').doc(item.documentId).update({
-                        'riderRid': box.read('uid'),
-                        'latRider': box.read('curLat'),
-                        'lngRider': box.read('curLng'),
-                        'status': 2
-                      });
+                      if (item.riderUid == null) {
+                        await db
+                            .collection('order')
+                            .doc(item.documentId)
+                            .update({
+                          'riderRid': box.read('uid'),
+                          'latRider': box.read('curLat'),
+                          'lngRider': box.read('curLng'),
+                          'status': 2
+                        });
 
-                      Get.to(() => StatusRider(docId: item.documentId));
+                        Get.to(() => StatusRider(docId: item.documentId));
+                      }
                     },
                     child: const Text('รับงาน'),
                   ),

@@ -1,17 +1,22 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:developer';
+import 'dart:io';
 import 'dart:math' hide log;
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_polyline_points/flutter_polyline_points.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:hermes_app/config/config.dart';
 import 'package:hermes_app/models/response/order_firebase_res.dart';
+import 'package:hermes_app/pages_rider/home_rider.dart';
 import 'package:http/http.dart' as http;
+import 'package:image_picker/image_picker.dart';
 import 'package:intl/date_symbol_data_local.dart';
 
 class StatusRider extends StatefulWidget {
@@ -42,7 +47,13 @@ class _StatuspageState extends State<StatusRider> {
   late LatLng destination;
   late LatLng pickup;
 
-  int distanceDestination = 0;
+  bool _isLoading = false;
+  String pictureUrl = '';
+  final ImagePicker picker = ImagePicker();
+  XFile? image;
+
+  String distance = '';
+  String duration = '';
   bool distanceAccpet = false;
 
   CameraPosition initPosition = const CameraPosition(
@@ -50,6 +61,10 @@ class _StatuspageState extends State<StatusRider> {
     zoom: 15,
   );
 
+  int _activeButtonIndex = 0;
+
+  double screenWidth = 0;
+  double screenHeight = 0;
   @override
   void initState() {
     super.initState();
@@ -61,110 +76,245 @@ class _StatuspageState extends State<StatusRider> {
 
   @override
   Widget build(BuildContext context) {
-    double screenWidth = MediaQuery.of(context).size.width;
-    double screenHeight = MediaQuery.of(context).size.height;
+    screenWidth = MediaQuery.of(context).size.width;
+    screenHeight = MediaQuery.of(context).size.height;
 
     return PopScope(
       canPop: false,
       child: Scaffold(
-        body: SingleChildScrollView(
-          child: Stack(
-            children: [
-              Column(
-                children: [
-                  Container(
-                    width: screenWidth,
-                    height: screenHeight * 0.35,
-                    decoration: const BoxDecoration(
-                      color: Color(0xFF2C262A),
-                      borderRadius: BorderRadius.only(
-                        bottomLeft: Radius.circular(18),
-                        bottomRight: Radius.circular(18),
-                      ),
+        body: Stack(
+          children: [
+            Column(
+              children: [
+                Container(
+                  width: screenWidth,
+                  height: screenHeight * 0.35,
+                  decoration: const BoxDecoration(
+                    color: Color(0xFF2C262A),
+                    borderRadius: BorderRadius.only(
+                      bottomLeft: Radius.circular(18),
+                      bottomRight: Radius.circular(18),
                     ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(20, 80, 20, 0),
-                          child: Center(
-                            child: Image.asset(
-                              'assets/images/Logo_status.png',
-                              width: screenWidth * 0.7,
-                            ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(20, 80, 20, 0),
+                        child: Center(
+                          child: Image.asset(
+                            'assets/images/Logo_status.png',
+                            width: screenWidth * 0.7,
                           ),
                         ),
-                      ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            Padding(
+              padding: EdgeInsets.fromLTRB(
+                screenWidth * 0.045,
+                screenHeight * 0.28,
+                screenWidth * 0.045,
+                0,
+              ),
+              child: Container(
+                width: screenWidth,
+                height: screenHeight,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE8E8E8),
+                  borderRadius: BorderRadius.circular(18),
+                ),
+              ),
+            ),
+            Padding(
+              padding: EdgeInsets.fromLTRB(
+                screenWidth * 0.1,
+                screenHeight * 0.3,
+                screenWidth * 0.1,
+                0,
+              ),
+              child: SizedBox(
+                width: screenWidth * 0.8,
+                height: screenHeight * 0.25,
+                child: GoogleMap(
+                  mapType: MapType.normal,
+                  initialCameraPosition: initPosition,
+                  myLocationEnabled: false,
+                  markers: _markers,
+                  polylines: _polylines,
+                  onMapCreated: (GoogleMapController controller) {
+                    mapController = controller;
+                    Future.delayed(const Duration(milliseconds: 200), () {
+                      _fitAllMarkers();
+                    });
+                  },
+                  zoomGesturesEnabled: true,
+                  scrollGesturesEnabled: true,
+                  zoomControlsEnabled: true,
+                  myLocationButtonEnabled: false,
+                ),
+              ),
+            ),
+            Container(
+              margin: EdgeInsets.fromLTRB(0, screenHeight * 0.56, 0, 0),
+              child: SingleChildScrollView(
+                child: Column(
+                  children: [
+                    Padding(
+                      padding: EdgeInsets.fromLTRB(
+                        screenWidth * 0.1,
+                        0,
+                        screenWidth * 0.1,
+                        0,
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text('สถานะการจัดส่ง',
+                              style: TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                              )),
+                          Row(
+                            children: [
+                              distance != null
+                                  ? Text(distance.toString(),
+                                      style: const TextStyle(
+                                        fontSize: 20,
+                                        fontWeight: FontWeight.bold,
+                                      ))
+                                  : const CircularProgressIndicator(),
+                              SizedBox(
+                                width: screenWidth * 0.02,
+                              ),
+                              duration != null
+                                  ? Text(duration.toString(),
+                                      style: const TextStyle(
+                                        fontSize: 20,
+                                        fontWeight: FontWeight.bold,
+                                      ))
+                                  : const CircularProgressIndicator(),
+                            ],
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                ],
-              ),
-              Padding(
-                padding: EdgeInsets.fromLTRB(
-                  screenWidth * 0.045,
-                  screenHeight * 0.28,
-                  screenWidth * 0.045,
-                  0,
+                    Padding(
+                      padding: EdgeInsets.fromLTRB(
+                        screenWidth * 0.1,
+                        0,
+                        screenWidth * 0.1,
+                        0,
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceAround,
+                        children: [
+                          _buildStatusStep('ไรเดอร์\nรับงาน', Icons.inbox,
+                              int.parse(orders[0].status) >= 1),
+                          _buildConnectorLine(int.parse(orders[0].status) >= 2),
+                          _buildStatusStep(
+                              'รอไรเดอร์\nมารับสินค้า',
+                              Icons.directions_bike,
+                              int.parse(orders[0].status) >= 2),
+                          _buildConnectorLine(int.parse(orders[0].status) >= 3),
+                          _buildStatusStep(
+                              'รับสินค้าแล้ว\nกำลังเดินทาง',
+                              Icons.local_shipping,
+                              int.parse(orders[0].status) >= 3),
+                          _buildConnectorLine(int.parse(orders[0].status) >= 4),
+                          _buildStatusStep('ส่งสินค้า\nเสร็จสิ้น',
+                              Icons.done_all, int.parse(orders[0].status) >= 4),
+                        ],
+                      ),
+                    ),
+                    Padding(
+                      padding: EdgeInsets.fromLTRB(
+                          0, screenHeight * 0.01, 0, screenHeight * 0.01),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          _buildStatusButton(2, 'รอไรเดอร์\nมารับสินค้า',
+                              int.parse(orders[0].status) >= 1),
+                          const SizedBox(width: 8),
+                          _buildStatusButton(3, 'ไรเดอร์รับ\nสินค้า',
+                              int.parse(orders[0].status) >= 2),
+                          const SizedBox(width: 8),
+                          _buildStatusButton(4, 'ส่งสินค้า\nเสร็จสิ้น',
+                              int.parse(orders[0].status) >= 3),
+                        ],
+                      ),
+                    ),
+                    Padding(
+                      padding: EdgeInsets.fromLTRB(
+                        screenWidth * 0.1,
+                        0,
+                        screenWidth * 0.1,
+                        0,
+                      ),
+                      child: Container(
+                        width: screenWidth * 0.9,
+                        height: screenHeight * 0.3,
+                        decoration: BoxDecoration(
+                          border: Border.all(color: Colors.black, width: 1),
+                          borderRadius: BorderRadius.circular(8.0),
+                        ),
+                        child: InkWell(
+                          onTap: imagePicker,
+                          child: Center(
+                            // Center the image within the container
+                            child: (_activeButtonIndex == 2)
+                                ? showImagePerStaus(screenWidth, screenHeight,
+                                    _activeButtonIndex)
+                                : (_activeButtonIndex == 3)
+                                    ? showImagePerStaus(screenWidth,
+                                        screenHeight, _activeButtonIndex)
+                                    : (_activeButtonIndex == 4)
+                                        ? showImagePerStaus(screenWidth,
+                                            screenHeight, _activeButtonIndex)
+                                        : noImagePerStatus(
+                                            screenWidth, screenHeight),
+                          ),
+                        ),
+                      ),
+                    ),
+                    Padding(
+                      padding:
+                          EdgeInsets.symmetric(vertical: screenHeight * 0.02),
+                      child: SizedBox(
+                        width: screenWidth * 0.5,
+                        height: screenHeight * 0.06,
+                        child: FilledButton(
+                          onPressed: addPicturePerStatus,
+                          style: FilledButton.styleFrom(
+                              backgroundColor: Colors.orange,
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(5))),
+                          child: const Text('TEST'),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-                child: Container(
-                  width: screenWidth,
-                  height: screenHeight * 0.7,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFE8E8E8),
-                    borderRadius: BorderRadius.circular(18),
-                  ),
-                ),
               ),
-              if (isLoadingMap)
-                const Center(child: CircularProgressIndicator()),
-              Positioned(
-                top: screenHeight * 0.3,
-                left: (screenWidth * 0.5) - (screenWidth * 0.8 / 2),
-                child: SizedBox(
-                  width: screenWidth * 0.8,
-                  height: screenHeight * 0.25,
-                  child: GoogleMap(
-                    mapType: MapType.normal,
-                    initialCameraPosition: initPosition,
-                    myLocationEnabled: false,
-                    markers: _markers,
-                    polylines: _polylines,
-                    onMapCreated: (GoogleMapController controller) {
-                      mapController = controller;
-                      Future.delayed(const Duration(milliseconds: 200), () {
-                        _fitAllMarkers();
-                      });
-                    },
-                    zoomGesturesEnabled: true,
-                    scrollGesturesEnabled: true,
-                    zoomControlsEnabled: true,
-                    myLocationButtonEnabled: false,
-                  ),
-                ),
+            ),
+            Positioned(
+              top: screenHeight * 0.3,
+              right: screenWidth * 0.1,
+              child: FloatingActionButton.small(
+                onPressed: () async {
+                  // Move the map camera to the user's location
+                  mapController.animateCamera(
+                    CameraUpdate.newLatLng(
+                        LatLng(riders[0].latitude, riders[0].longitude)),
+                  );
+                },
+                child: const Icon(Icons.my_location),
               ),
-              Padding(
-                padding: EdgeInsets.fromLTRB(
-                  screenWidth * 0.1,
-                  screenHeight * 0.31,
-                  screenWidth * 0.1,
-                  0,
-                ),
-              ),
-              Padding(
-                padding: EdgeInsets.fromLTRB(
-                  screenWidth * 0.07,
-                  screenHeight * 0.55,
-                  screenWidth * 0.1,
-                  0,
-                ),
-                child: Text(distanceDestination.toString(),
-                    style: const TextStyle(
-                      fontSize: 17,
-                      fontWeight: FontWeight.bold,
-                    )),
-              ),
-            ],
-          ),
+            )
+          ],
         ),
       ),
     );
@@ -190,23 +340,32 @@ class _StatuspageState extends State<StatusRider> {
     pickup = LatLng(orders[0].latSender!, orders[0].lngSender!);
     destination = LatLng(orders[0].latReceiver!, orders[0].lngReceiver!);
 
+    _activeButtonIndex = int.parse(orders[0].status);
+
     for (var order in orders) {
       riders.add(LatLng(order.latRider!, order.lngRider!));
     }
     setupMarkers();
-    setState(() {
-      distanceDestination = Geolocator.distanceBetween(
-        orders[0].latRider!,
-        orders[0].lngRider!,
-        destination.latitude,
-        destination.longitude,
-      ).round();
-      if (distanceDestination < 20) {
-        distanceAccpet = true;
-      }
-      log(distanceDestination.toString());
-      initPosition = CameraPosition(target: destination);
-    });
+    setState(() {});
+  }
+
+  Future<void> checkRiderUid() async {
+    var check = await db
+        .collection("order")
+        .where('riderRid', isEqualTo: box.read('uid'))
+        .get();
+    if (check.docs.isEmpty) {
+      orders = check.docs.map((doc) {
+        return OrderRes.fromFirestore(doc.data(), doc.id);
+      }).toList();
+
+      Get.to(() => const HomeRiderpage());
+    } else {
+      await db.collection('order').doc(widget.docId).update({
+        'latRider': box.read('curLat'),
+        'lngRider': box.read('curLng'),
+      });
+    }
   }
 
   Future<void> setupMarkers() async {
@@ -231,7 +390,7 @@ class _StatuspageState extends State<StatusRider> {
       String url = '';
       if (orders[0].status == '2') {
         url =
-            "https://maps.googleapis.com/maps/api/directions/json?origin=${destination.latitude},${destination.longitude}&destination=${rider.latitude},${rider.longitude}&mode=driving&key=$apiKey";
+            "https://maps.googleapis.com/maps/api/directions/json?origin=${rider.latitude},${rider.longitude}&destination=${pickup.latitude},${pickup.longitude}&mode=driving&key=$apiKey";
       } else if (orders[0].status == '3') {
         url =
             "https://maps.googleapis.com/maps/api/directions/json?origin=${rider.latitude},${rider.longitude}&destination=${destination.latitude},${destination.longitude}&mode=driving&key=$apiKey";
@@ -248,14 +407,20 @@ class _StatuspageState extends State<StatusRider> {
         }
 
         var leg = jsonResponse['routes'][0]['legs'][0];
-        var distance = leg['distance']['text'];
-        var duration = leg['duration']['text'];
+        distance = leg['distance']['text'];
+        duration = leg['duration']['text'];
 
         log("Distance from $rider to destination: $distance");
         log("Duration from $rider to destination: $duration");
 
-        _addDestinationMarker(distance, duration);
+        if (orders[0].status == '2') {
+          _addDestinationMarker('ยังไม่รับของจากผู้ส่ง', '');
+        } else {
+          _addDestinationMarker(distance, duration);
+        }
+
         _addPickUpMarker(distance, duration);
+
         await _addRiderMarker(rider);
 
         List<LatLng> polylineCoordinates = [];
@@ -285,10 +450,17 @@ class _StatuspageState extends State<StatusRider> {
             polylineCoordinates.add(LatLng(point.latitude, point.longitude));
           }
 
+          Color color;
+          if (orders[0].status == '2') {
+            color = Colors.blue;
+          } else {
+            color = Colors.green;
+          }
+
           _polylines.add(Polyline(
             polylineId: PolylineId('route_$index'),
             points: polylineCoordinates,
-            color: Colors.blue,
+            color: color,
             width: 5,
           ));
         }
@@ -411,11 +583,289 @@ class _StatuspageState extends State<StatusRider> {
   }
 
   void startRealtimeGet() {
+    setState(() {
+      _markers.clear();
+      _polylines.clear();
+    });
     final docRef = db.collection("order").doc(widget.docId);
     docRef.snapshots().listen((event) {
       setState(() {
         readData();
       });
     }, onError: (error) => log("Listen failed"));
+  }
+
+  Widget _buildStatusStep(String label, IconData icon, bool isActive) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        CircleAvatar(
+          radius: 24,
+          backgroundColor: isActive ? Colors.orange : Colors.grey,
+          child: Icon(icon, color: Colors.white),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          label,
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontSize: 12,
+            color: isActive ? Colors.black : Colors.black,
+            fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildConnectorLine(bool isActive) {
+    return Expanded(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(0, 0, 0, 35),
+        child: Container(
+          height: 2,
+          color: isActive ? Colors.orange : Colors.black,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatusButton(int index, String text, bool disable) {
+    log(disable.toString());
+    bool isActive = _activeButtonIndex == index;
+    log(_activeButtonIndex.toString());
+    return ElevatedButton(
+      onPressed: !disable
+          ? null
+          : () {
+              setState(() {
+                _activeButtonIndex = index; // Update the active button index
+              });
+            },
+      style: ElevatedButton.styleFrom(
+        backgroundColor: !disable
+            ? Colors.orange[200]
+            : isActive
+                ? Colors.orange
+                : Colors.grey, // Change color based on active state
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(24),
+        ),
+        // padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+      ),
+      child: Text(
+        text,
+        textAlign: TextAlign.center,
+        style: TextStyle(
+          color: !disable
+              ? Colors.black38
+              : isActive
+                  ? Colors.white
+                  : Colors.black54, // Text color based on active state
+          fontSize: 16,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+    );
+  }
+
+  Image showImagePerStaus(double screenWidth, double screenHeight, int status) {
+    if (orders[0].picture != '' && status == 2) {
+      setState(() {});
+      return Image.network(
+        orders[0].picture, fit: BoxFit.contain,
+        width: screenWidth *
+            0.85, // Ensure the image doesn't overflow horizontally
+        height: screenHeight * 0.3,
+      );
+    } else if (orders[0].picture_2 != '' && status == 3) {
+      setState(() {});
+      return Image.network(
+        orders[0].picture_2, fit: BoxFit.contain,
+        width: screenWidth *
+            0.85, // Ensure the image doesn't overflow horizontally
+        height: screenHeight * 0.3,
+      );
+    } else if (orders[0].picture_3 != '' && status == 4) {
+      setState(() {});
+      return Image.network(
+        orders[0].picture_3, fit: BoxFit.contain,
+        width: screenWidth *
+            0.85, // Ensure the image doesn't overflow horizontally
+        height: screenHeight * 0.3,
+      );
+    } else if (image != null) {
+      return Image.file(
+        File(image!.path),
+        fit: BoxFit.contain,
+        width: screenWidth *
+            0.85, // Ensure the image doesn't overflow horizontally
+        height:
+            screenHeight * 0.3, // Ensure the image doesn't overflow vertically
+      );
+    } else {
+      return Image.asset(
+        'assets/images/Logo_camera.png',
+        fit: BoxFit.contain, // Make sure the SVG fits properly
+        width: screenWidth * 0.85, // Same size for the SVG
+        height: screenHeight * 0.2, // Adjust the height for SVG
+      );
+    }
+  }
+
+  Image noImagePerStatus(double screenWidth, double screenHeight) {
+    return Image.asset(
+      'assets/images/Logo_camera.png',
+      fit: BoxFit.contain, // Make sure the SVG fits properly
+      width: screenWidth * 0.85, // Same size for the SVG
+      height: screenHeight * 0.2, // Adjust the height for SVG
+    );
+  }
+
+  Future<void> imagePicker() async {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      isDismissible: true,
+      enableDrag: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(20),
+          bottom: Radius.circular(20),
+        ),
+      ),
+      backgroundColor: Colors.white,
+      clipBehavior: Clip.antiAliasWithSaveLayer,
+      builder: (context) {
+        return Padding(
+          padding: const EdgeInsets.only(left: 20, right: 20),
+          child: Container(
+            width: MediaQuery.of(context).size.width * 0.82,
+            padding: const EdgeInsets.symmetric(vertical: 20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  'เลือกรูปภาพ',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 10),
+                const Divider(),
+                ListTile(
+                  leading: const Icon(Icons.camera, size: 30),
+                  title: const Text('ถ่ายรูปจากกล้อง',
+                      style: TextStyle(fontSize: 16)),
+                  onTap: () async {
+                    Navigator.pop(context);
+                    try {
+                      final pickedFile =
+                          await picker.pickImage(source: ImageSource.camera);
+                      if (pickedFile != null) {
+                        setState(() {
+                          image = pickedFile;
+                        });
+                      }
+                    } catch (e) {
+                      log("Error picking image: $e");
+                    }
+                  },
+                ),
+                const Divider(),
+                ListTile(
+                  leading: const Icon(Icons.photo_library, size: 30),
+                  title: const Text('เลือกรูปจากแกลเลอรี',
+                      style: TextStyle(fontSize: 16)),
+                  onTap: () async {
+                    Navigator.pop(context);
+                    try {
+                      final pickedFile =
+                          await picker.pickImage(source: ImageSource.gallery);
+                      if (pickedFile != null) {
+                        setState(() {
+                          image = pickedFile;
+                        });
+                      }
+                    } catch (e) {
+                      log("Error picking image: $e");
+                    }
+                  },
+                ),
+                const Divider(),
+                const SizedBox(height: 10),
+                TextButton(
+                  onPressed: () {
+                    Navigator.pop(context);
+                  },
+                  child: const Text(
+                    'ปิด',
+                    style: TextStyle(
+                      fontSize: 20,
+                      color: Color(0xFFFF7723),
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 10),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> addPicturePerStatus() async {
+    if (image == null) return;
+
+    showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: const Center(child: Text('ยืนยันรูปนี้?')),
+            content: Image.file(
+              File(image!.path), fit: BoxFit.contain,
+              width: screenWidth *
+                  0.85, // Ensure the image doesn't overflow horizontally
+              height: screenHeight * 0.3,
+            ),
+            actions: [FilledButton(onPressed: () {}, child: const Text('OK'))],
+          );
+        });
+
+    // setState(() {
+    //   _isLoading = true;
+    // });
+
+    // await imageUpload();
+    // var data;
+    // if (_activeButtonIndex == 2) {
+    //   data = {'picture_2': pictureUrl, 'status': 3};
+    // } else if (_activeButtonIndex == 3) {
+    //   data = {'picture_3': pictureUrl, 'status': 4};
+    // }
+
+    // await db.collection('order').doc(widget.docId).update(data);
+
+    // image = null;
+    // setState(() {
+    //   _isLoading = false;
+    // });
+  }
+
+  Future<void> imageUpload() async {
+    log(image!.path);
+    String fileName = DateTime.now().millisecondsSinceEpoch.toString();
+    Reference ref = FirebaseStorage.instance.ref();
+    Reference refUserProfile = ref.child('order');
+    Reference imageToUpload = refUserProfile.child(fileName);
+
+    try {
+      await imageToUpload.putFile(File(image!.path));
+      log('test');
+      pictureUrl = await imageToUpload.getDownloadURL();
+      log(pictureUrl);
+    } catch (e) {
+      log('Error!');
+    }
   }
 }

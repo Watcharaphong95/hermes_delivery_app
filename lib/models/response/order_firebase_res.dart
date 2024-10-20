@@ -7,6 +7,8 @@ class OrderRes {
   final DateTime createAt;
   final String detail;
   final String picture;
+  final String picture_2;
+  final String picture_3;
   final String documentId;
   final String status;
   final String? riderUid; // Nullable rider UID
@@ -28,6 +30,8 @@ class OrderRes {
     required this.createAt,
     required this.detail,
     required this.picture,
+    required this.picture_2,
+    required this.picture_3,
     required this.documentId,
     required this.status,
     this.riderUid,
@@ -53,6 +57,8 @@ class OrderRes {
       createAt: dateTime,
       detail: data['detail'] ?? '',
       picture: data['picture'] ?? '',
+      picture_2: data['picture_2'] ?? '',
+      picture_3: data['picture_3'] ?? '',
       documentId: documentId,
       status: data['status'].toString(), // Ensure status is a string
       riderUid: data['riderUid']?.toString(),
