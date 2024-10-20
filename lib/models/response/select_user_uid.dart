@@ -14,7 +14,6 @@ SelectUserUid selectUserUidFromJson(String str) {
 // Function to convert a single SelectUserUid to JSON string
 String selectUserUidToJson(SelectUserUid data) => json.encode(data.toJson());
 
-// SelectUserUid class definition
 class SelectUserUid {
   int uid;
   String phone;
@@ -39,15 +38,18 @@ class SelectUserUid {
   });
 
   factory SelectUserUid.fromJson(Map<String, dynamic> json) => SelectUserUid(
-        uid: json["uid"],
-        phone: json["phone"],
-        name: json["name"],
-        password: json["password"],
-        address: json["address"],
-        lat: (json["lat"] ?? 0.0).toDouble(), // Use 0.0 if lat is null
-        lng: (json["lng"] ?? 0.0).toDouble(), // Use 0.0 if lng is null
-        picture: json["picture"],
-        type: json["type"],
+        uid: json["uid"] ?? 0, // Default to 0 if uid is null
+        phone: json["phone"] ?? '', // Default to empty string if phone is null
+        name: json["name"] ?? '', // Default to empty string if name is null
+        password: json["password"] ??
+            '', // Default to empty string if password is null
+        address:
+            json["address"] ?? '', // Default to empty string if address is null
+        lat: (json["lat"] ?? 0.0).toDouble(), // Default to 0.0 if lat is null
+        lng: (json["lng"] ?? 0.0).toDouble(), // Default to 0.0 if lng is null
+        picture:
+            json["picture"] ?? '', // Default to empty string if picture is null
+        type: json["type"] ?? 0, // Default to 0 if type is null
       );
 
   Map<String, dynamic> toJson() => {
@@ -72,6 +74,5 @@ void main() {
   SelectUserUid user = selectUserUidFromJson(jsonString);
 
   // Print the details of the user
-  print(
-      'User ID: ${user.uid}, Name: ${user.name}, Phone: ${user.phone}, Latitude: ${user.lat}, Longitude: ${user.lng}');
+  print('User ID: ${user.uid}, Name: ${user.name}, Phone: ${user.phone}');
 }

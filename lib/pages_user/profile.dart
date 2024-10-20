@@ -20,6 +20,7 @@ class _ProfilepageState extends State<Profilepage> {
   String url = "";
   final box = GetStorage();
   List<SelectUserUid> user = [];
+  double screenWidth = 0, screenHeight = 0;
 
   @override
   void initState() {
@@ -30,9 +31,10 @@ class _ProfilepageState extends State<Profilepage> {
   @override
   Widget build(BuildContext context) {
     // Screen dimensions
-    double screenWidth = MediaQuery.of(context).size.width;
-    double screenHeight = MediaQuery.of(context).size.height;
+    screenWidth = MediaQuery.of(context).size.width;
+    screenHeight = MediaQuery.of(context).size.height;
     return Scaffold(
+      backgroundColor: Colors.white,
       body: SingleChildScrollView(
         child: user.isEmpty // Check if user list is empty
             ? const Center(
@@ -81,7 +83,7 @@ class _ProfilepageState extends State<Profilepage> {
                     ),
                   ),
                   SizedBox(
-                    height: screenHeight * 0.01,
+                    height: screenHeight * 0.04,
                   ),
                   Stack(
                     children: [
@@ -181,7 +183,7 @@ class _ProfilepageState extends State<Profilepage> {
                                     padding:
                                         const EdgeInsets.fromLTRB(0, 10, 0, 30),
                                     child: Text(
-                                      'Latitude: ${user[0].lat} Longitude: ${user[0].lng}',
+                                      'Latitude: ${user[0].lat ?? 'N/A'} Longitude: ${user[0].lng ?? 'N/A'}',
                                       style: const TextStyle(fontSize: 12),
                                     ),
                                   ),
@@ -226,7 +228,7 @@ class _ProfilepageState extends State<Profilepage> {
                                             const EdgeInsets.only(left: 8.0),
                                         child: ElevatedButton(
                                           onPressed: () {
-                                            Get.to(() => const LoginPage());
+                                            dialog();
                                           },
                                           style: ElevatedButton.styleFrom(
                                             backgroundColor:
@@ -262,24 +264,43 @@ class _ProfilepageState extends State<Profilepage> {
                                     !user[0].picture.contains(
                                         "ll") // ตรวจสอบว่าไม่เป็น "ll"
                                 ? (user[0].picture.startsWith('http')
-                                    ? Image.network(
-                                        user[0]
-                                            .picture, // ใช้ Image.network ถ้าเป็น URL ที่ถูกต้อง
-                                        width: 160,
-                                        fit: BoxFit.cover,
+                                    ? ClipOval(
+                                        child: Image.network(
+                                          user[0]
+                                              .picture, // ใช้ Image.network ถ้าเป็น URL ที่ถูกต้อง
+                                          width: 160,
+                                          height:
+                                              160, // กำหนดความสูงให้เท่ากับความกว้าง
+                                          fit: BoxFit.cover,
+                                        ),
                                       )
-                                    : Image.asset(
-                                        user[0]
-                                            .picture, // ใช้ Image.asset ถ้าข้อมูลเป็น Asset
-                                        width: 160,
+                                    : ClipOval(
+                                        child: Image.asset(
+                                          user[0]
+                                              .picture, // ใช้ Image.asset ถ้าข้อมูลเป็น Asset
+                                          width: 160,
+                                          height:
+                                              160, // กำหนดความสูงให้เท่ากับความกว้าง
+                                          fit: BoxFit.cover,
+                                        ),
                                       ))
-                                : Image.asset(
-                                    'assets/images/Profileuser.png', // รูปภาพดีฟอลต์
-                                    width: 160,
+                                : ClipOval(
+                                    child: Image.asset(
+                                      'assets/images/Profileuser.png', // รูปภาพดีฟอลต์
+                                      width: 160,
+                                      height:
+                                          160, // กำหนดความสูงให้เท่ากับความกว้าง
+                                      fit: BoxFit.cover,
+                                    ),
                                   ))
-                            : Image.asset(
-                                'assets/images/Profileuser.png', // รูปภาพดีฟอลต์
-                                width: 160,
+                            : ClipOval(
+                                child: Image.asset(
+                                  'assets/images/Profileuser.png', // รูปภาพดีฟอลต์
+                                  width: 160,
+                                  height:
+                                      160, // กำหนดความสูงให้เท่ากับความกว้าง
+                                  fit: BoxFit.cover,
+                                ),
                               ),
                       ),
                     ],
@@ -309,5 +330,82 @@ class _ProfilepageState extends State<Profilepage> {
 
     log(user.length.toString());
     setState(() {}); // Call setState to refresh UI after data is retrieved
+  }
+
+  Future<void> dialog() async {
+    // แสดงกล่องยืนยัน
+    bool confirmUpdate = await showDialog<bool>(
+          context: context,
+          builder: (BuildContext context) {
+            return Dialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20), // รูปแบบมุม
+              ),
+              child: Container(
+                width: screenWidth, // ปรับความกว้าง
+                padding: const EdgeInsets.all(0), // เว้นพื้นที่รอบ
+                child: Column(
+                  mainAxisSize:
+                      MainAxisSize.min, // ขนาดของคอลัมน์จะใช้พื้นที่ที่จำเป็น
+                  children: <Widget>[
+                    const Padding(
+                      padding: EdgeInsets.fromLTRB(0, 30, 10, 0),
+                      child: Center(
+                          child: Text(
+                        "ยืนยันการออกจากระบบ",
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      )),
+                    ),
+                    const SizedBox(height: 10), // เว้นพื้นที่
+                    const Padding(
+                      padding: EdgeInsets.all(5),
+                      child: Text("คุณต้องการออกจากระบบหรือไม่?"),
+                    ),
+                    const SizedBox(height: 10), // เว้นพื้นที่
+                    const Divider(), // เพิ่มเส้นขั้น
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(0, 5, 0, 10),
+                      child: Row(
+                        mainAxisAlignment:
+                            MainAxisAlignment.spaceEvenly, // จัดเรียงปุ่ม
+                        children: <Widget>[
+                          TextButton(
+                            onPressed: () {
+                              Navigator.of(context)
+                                  .pop(false); // ผู้ใช้กด "ยกเลิก"
+                            },
+                            child: const Text(
+                              "ยกเลิก",
+                              style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.black),
+                            ),
+                          ),
+                          TextButton(
+                            onPressed: () {
+                              Get.to(() => const LoginPage());
+                            },
+                            child: const Text(
+                              "ยืนยัน",
+                              style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFFFF7723)),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        ) ??
+        false;
   }
 }
