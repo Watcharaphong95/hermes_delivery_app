@@ -267,6 +267,20 @@ class _StatuspageState extends State<StatusRider> {
                 ),
               ),
             ),
+            Positioned(
+              top: screenHeight * 0.3,
+              right: screenWidth * 0.1,
+              child: FloatingActionButton.small(
+                onPressed: () async {
+                  // Move the map camera to the user's location
+                  mapController.animateCamera(
+                    CameraUpdate.newLatLng(
+                        LatLng(riders[0].latitude, riders[0].longitude)),
+                  );
+                },
+                child: const Icon(Icons.my_location),
+              ),
+            )
           ],
         ),
       ),
@@ -364,8 +378,14 @@ class _StatuspageState extends State<StatusRider> {
         log("Distance from $rider to destination: $distance");
         log("Duration from $rider to destination: $duration");
 
-        _addDestinationMarker(distance, duration);
+        if (orders[0].status == '2') {
+          _addDestinationMarker('ยังไม่รับของจากผู้ส่ง', '');
+        } else {
+          _addDestinationMarker(distance, duration);
+        }
+
         _addPickUpMarker(distance, duration);
+
         await _addRiderMarker(rider);
 
         List<LatLng> polylineCoordinates = [];
@@ -395,10 +415,17 @@ class _StatuspageState extends State<StatusRider> {
             polylineCoordinates.add(LatLng(point.latitude, point.longitude));
           }
 
+          Color color;
+          if (orders[0].status == '2') {
+            color = Colors.blue;
+          } else {
+            color = Colors.green;
+          }
+
           _polylines.add(Polyline(
             polylineId: PolylineId('route_$index'),
             points: polylineCoordinates,
-            color: Colors.blue,
+            color: color,
             width: 5,
           ));
         }
@@ -521,6 +548,10 @@ class _StatuspageState extends State<StatusRider> {
   }
 
   void startRealtimeGet() {
+    setState(() {
+      _markers.clear();
+      _polylines.clear();
+    });
     final docRef = db.collection("order").doc(widget.docId);
     docRef.snapshots().listen((event) {
       setState(() {

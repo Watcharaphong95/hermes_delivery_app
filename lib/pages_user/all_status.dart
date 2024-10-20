@@ -167,6 +167,20 @@ class _AllStatusState extends State<AllStatus> {
                       fontWeight: FontWeight.bold,
                     )),
               ),
+              Positioned(
+                top: screenHeight * 0.3,
+                right: screenWidth * 0.1,
+                child: FloatingActionButton.small(
+                  onPressed: () async {
+                    // Move the map camera to the user's location
+                    mapController.animateCamera(
+                      CameraUpdate.newLatLng(LatLng(
+                          userLocation.latitude, userLocation.longitude)),
+                    );
+                  },
+                  child: const Icon(Icons.my_location),
+                ),
+              )
             ],
           ),
         ),
@@ -183,6 +197,9 @@ class _AllStatusState extends State<AllStatus> {
   }
 
   _prepareMark() async {
+    orders.clear();
+    riders.clear();
+    targets.clear();
     if (widget.isReceive) {
       await readDataReciever();
     } else {
@@ -212,7 +229,8 @@ class _AllStatusState extends State<AllStatus> {
       log('length = 0');
       return;
     }
-
+    riders.clear();
+    targets.clear();
     for (var order in orders) {
       if (order.latRider != null && order.lngRider != null) {
         riders.add(Locations(
@@ -236,7 +254,7 @@ class _AllStatusState extends State<AllStatus> {
         .collection('order')
         .where('senderUid', isEqualTo: box.read('uid'))
         .where('status', whereIn: [2, 3]).get();
-
+    log("result ${result.docs.length}");
     if (result.docs.isNotEmpty) {
       orders = result.docs.map((doc) {
         return OrderRes.fromFirestore(doc.data(), doc.id);
@@ -245,7 +263,8 @@ class _AllStatusState extends State<AllStatus> {
     } else {
       return;
     }
-
+    riders.clear();
+    targets.clear();
     for (var order in orders) {
       if (order.latRider != null && order.lngRider != null) {
         riders.add(Locations(
@@ -256,6 +275,7 @@ class _AllStatusState extends State<AllStatus> {
         targets.add(LatLng(order.latReceiver!, order.lngReceiver!));
       }
     }
+    // log('rider length${riders.length}');
     userLocation = LatLng(orders[0].latSender!, orders[0].lngSender!);
   }
 
@@ -267,7 +287,7 @@ class _AllStatusState extends State<AllStatus> {
     });
 
     for (int index = 0; index < riders.length; index++) {
-      Color color;
+      Color color = _getUniqueColor(index);
       Locations rider = riders[index];
       LatLng target = targets[index];
       LatLng user = userLocation;
@@ -298,12 +318,11 @@ class _AllStatusState extends State<AllStatus> {
         log("Duration from $rider to destination: $duration");
 
         await _addRiderMarker(
-            rider.location, distance, duration, 'Rider ${index + 1}');
+            rider.location, distance, duration, 'Rider ${index + 1}', color);
 
-        if (rider.status == '3') {
-          await _addTargetMarker(
-              target, distance, duration, 'Target ${index + 1}');
-        }
+        await _addTargetMarker(
+            target, distance, duration, 'Target ${index + 1}', color);
+        // if (rider.status == '3') {}
 
         List<LatLng> polylineCoordinates = [];
         late PolylineRequest request;
@@ -353,11 +372,11 @@ class _AllStatusState extends State<AllStatus> {
             polylineCoordinates.add(LatLng(point.latitude, point.longitude));
           }
 
-          if (rider.status == '2') {
-            color = Colors.blue;
-          } else {
-            color = Colors.green;
-          }
+          // if (rider.status == '2') {
+          //   color = Colors.blue;
+          // } else {
+          //   color = Colors.green;
+          // }
 
           _polylines.add(Polyline(
             polylineId: PolylineId('route_$index'),
@@ -376,27 +395,35 @@ class _AllStatusState extends State<AllStatus> {
     }
   }
 
-  Future<void> _addRiderMarker(
-      LatLng rider, String distance, String duration, String riderLabel) async {
+  Future<void> _addRiderMarker(LatLng rider, String distance, String duration,
+      String riderLabel, Color color) async {
+    double hueValue = HSVColor.fromColor(color).hue;
+
+    BitmapDescriptor customMarker =
+        BitmapDescriptor.defaultMarkerWithHue(hueValue);
     setState(() {
       _markers.add(Marker(
         markerId: MarkerId('rider_${rider.latitude}_${rider.longitude}'),
         position: rider,
         infoWindow: InfoWindow(
             title: riderLabel, snippet: 'ระยะทาง $distance เวลา ~$duration'),
-        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
+        icon: customMarker,
       ));
     });
   }
 
   Future<void> _addTargetMarker(LatLng target, String distance, String duration,
-      String targetLabel) async {
+      String targetLabel, Color color) async {
+    double hueValue = HSVColor.fromColor(color).hue;
+
+    BitmapDescriptor customMarker =
+        BitmapDescriptor.defaultMarkerWithHue(hueValue);
     setState(() {
       _markers.add(Marker(
         markerId: MarkerId('target_${target.latitude}_${target.longitude}'),
         position: target,
         infoWindow: InfoWindow(title: targetLabel),
-        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
+        icon: customMarker,
       ));
     });
   }
@@ -446,6 +473,10 @@ class _AllStatusState extends State<AllStatus> {
   }
 
   void startRealtimeGet() {
+    setState(() {
+      _markers.clear();
+      _polylines.clear();
+    });
     final docRef =
         db.collection('order').where('senderUid', isEqualTo: box.read('uid'));
 
@@ -454,6 +485,13 @@ class _AllStatusState extends State<AllStatus> {
       setState(() {});
       _prepareMark();
     }, onError: (error) => log("Listen failed"));
+  }
+
+  Color _getUniqueColor(int index) {
+    // Create unique colors based on the index using HSV
+    double hue = (index * 40) % 360; // Rotating hue around the color wheel
+    return HSVColor.fromAHSV(1.0, hue, 0.9, 0.9)
+        .toColor(); // Full saturation and brightness
   }
 }
 
