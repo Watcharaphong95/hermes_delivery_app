@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 
@@ -5,6 +6,7 @@ class OrderRes {
   final String receiverUid;
   final String senderUid;
   final DateTime createAt;
+  final DateTime? endAt; // Nullable endAt field
   final String detail;
   final String picture;
   final String picture_2;
@@ -28,6 +30,7 @@ class OrderRes {
     required this.receiverUid,
     required this.senderUid,
     required this.createAt,
+    this.endAt, // Nullable endAt
     required this.detail,
     required this.picture,
     required this.picture_2,
@@ -38,45 +41,42 @@ class OrderRes {
     required this.item,
     required this.senderName,
     required this.receiverName,
-    this.latReceiver, // New parameter for latitude of receiver
-    this.lngReceiver, // New parameter for longitude of receiver
-    this.latSender, // New parameter for latitude of sender
-    this.lngSender, // New parameter for longitude of sender
-    this.latRider, // New parameter for latitude of rider
-    this.lngRider, // New parameter for longitude of rider
+    this.latReceiver, // Nullable latitude for receiver
+    this.lngReceiver, // Nullable longitude for receiver
+    this.latSender, // Nullable latitude for sender
+    this.lngSender, // Nullable longitude for sender
+    this.latRider, // Nullable latitude for rider
+    this.lngRider, // Nullable longitude for rider
   });
 
   // Factory method to create an OrderRes object from Firestore data
   factory OrderRes.fromFirestore(Map<String, dynamic> data, String documentId) {
     Timestamp timestamp = data['createAt'] as Timestamp;
-    DateTime dateTime = timestamp.toDate();
 
     return OrderRes(
-      receiverUid: data['receiverUid'].toString(),
-      senderUid: data['senderUid'].toString(),
-      createAt: dateTime,
+      receiverUid: data['receiverUid']?.toString() ?? '',
+      senderUid: data['senderUid']?.toString() ?? '',
+      createAt: timestamp.toDate(),
+      endAt:
+          data['endAt'] != null ? (data['endAt'] as Timestamp).toDate() : null,
       detail: data['detail'] ?? '',
       picture: data['picture'] ?? '',
       picture_2: data['picture_2'] ?? '',
       picture_3: data['picture_3'] ?? '',
       documentId: documentId,
-      status: data['status'].toString(), // Ensure status is a string
+      status: data['status']?.toString() ?? '', // Ensure status is a string
       riderRid: data['riderRid']?.toString(),
       item: data['item'] ?? '',
       senderName: data['senderName'] ?? '',
       receiverName: data['receiverName'] ?? '',
-      latReceiver: data['latReceiver']
-          ?.toDouble(), // Handle nullable latitude for receiver
-      lngReceiver: data['lngReceiver']
-          ?.toDouble(), // Handle nullable longitude for receiver
-      latSender:
-          data['latSender']?.toDouble(), // Handle nullable latitude for sender
-      lngSender:
-          data['lngSender']?.toDouble(), // Handle nullable longitude for sender
-      latRider:
-          data['latRider']?.toDouble(), // Handle nullable latitude for rider
-      lngRider:
-          data['lngRider']?.toDouble(), // Handle nullable longitude for rider
+      latReceiver:
+          data['latReceiver']?.toDouble(), // Nullable latitude for receiver
+      lngReceiver:
+          data['lngReceiver']?.toDouble(), // Nullable longitude for receiver
+      latSender: data['latSender']?.toDouble(), // Nullable latitude for sender
+      lngSender: data['lngSender']?.toDouble(), // Nullable longitude for sender
+      latRider: data['latRider']?.toDouble(), // Nullable latitude for rider
+      lngRider: data['lngRider']?.toDouble(), // Nullable longitude for rider
     );
   }
 

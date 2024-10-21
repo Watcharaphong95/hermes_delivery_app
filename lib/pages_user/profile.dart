@@ -401,7 +401,10 @@ class _ProfilepageState extends State<Profilepage> {
                           ),
                           FilledButton(
                             onPressed: () {
-                              Navigator.of(context).pop(true);
+                              box.remove('rememberMe');
+                              box.remove('savedPhone');
+                              box.remove('savedPassword');
+                              Get.to(() => const LoginPage());
                             },
                             style: FilledButton.styleFrom(
                               backgroundColor: const Color(

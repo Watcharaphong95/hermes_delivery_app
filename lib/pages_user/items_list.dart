@@ -7,6 +7,7 @@ import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:hermes_app/models/response/order_firebase_res.dart';
 import 'package:hermes_app/pages_user/all_status.dart';
+import 'package:hermes_app/pages_user/record.dart';
 import 'package:hermes_app/pages_user/status.dart';
 import 'package:intl/date_symbol_data_local.dart';
 
@@ -227,9 +228,15 @@ class _ListpageState extends State<ItemsList> {
                                 padding: const EdgeInsets.only(bottom: 20),
                                 child: GestureDetector(
                                   onTap: () {
-                                    Get.to(() => Statuspage(
-                                          docId: item.documentId,
-                                        ));
+                                    if (item.status != '4') {
+                                      Get.to(() => Statuspage(
+                                            docId: item.documentId,
+                                          ));
+                                    } else {
+                                      Get.to(() => Record(
+                                            docId: item.documentId,
+                                          ));
+                                    }
                                   },
                                   child: Card(
                                     color: const Color(0xFFE8E8E8),

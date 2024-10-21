@@ -11,6 +11,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:hermes_app/config/config.dart';
+import 'package:hermes_app/models/request/rider_where_id.dart';
 import 'package:hermes_app/models/response/order_firebase_res.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
@@ -28,6 +29,7 @@ class _StatuspageState extends State<Statuspage> {
   final box = GetStorage();
   PolylinePoints polylinePoints = PolylinePoints();
   String apiKey = "";
+  String url = "";
   bool isLoadingMap = true;
   late GoogleMapController mapController;
   Set<Marker> _markers = {};
@@ -37,6 +39,7 @@ class _StatuspageState extends State<Statuspage> {
   late StreamSubscription listener;
 
   List<OrderRes> orders = [];
+  List<SelectRiderRid> riderData = [];
 
   List<Locations> origins = [];
 
@@ -296,6 +299,36 @@ class _StatuspageState extends State<Statuspage> {
                             ),
                           ),
                         ),
+                        Padding(
+                          padding: EdgeInsets.symmetric(
+                              horizontal: screenWidth * 0.1,
+                              vertical: screenHeight * 0.01),
+                          child: riderData.isNotEmpty
+                              ? Container(
+                                  decoration: BoxDecoration(
+                                    color: Colors
+                                        .lightBlue[100], // Background color
+                                    borderRadius: BorderRadius.circular(
+                                        12), // Rounded corners
+                                    boxShadow: const [
+                                      BoxShadow(
+                                        color: Colors.black26, // Shadow color
+                                        offset: Offset(0, 4), // Shadow offset
+                                        blurRadius: 8, // Shadow blur
+                                      ),
+                                    ],
+                                  ),
+                                  padding: const EdgeInsets.all(
+                                      16.0), // Internal padding
+                                  child: Text(
+                                    'ผู้ส่ง\n'
+                                    'ชื่อ: ${riderData[0].name}\n'
+                                    'ป้ายทะเบียน: ${riderData[0].plate}\n'
+                                    'เบอร์โทร: ${riderData[0].phone}',
+                                    style: const TextStyle(fontSize: 18),
+                                  ))
+                              : const Text('Loading'),
+                        ),
                       ],
                     ),
             ),
@@ -423,6 +456,17 @@ class _StatuspageState extends State<Statuspage> {
         apiKey = config['apiKey'];
       });
     });
+    await Configuration.getConfig().then((config) {
+      url = config['apiEndPoint'];
+    });
+    setState(() {});
+  }
+
+  Future<void> getRider(String rid) async {
+    var res = await http.get(Uri.parse('$url/rider/$rid'));
+    riderData = selectRiderRidFromJson(res.body);
+    log(riderData[0].name);
+    setState(() {});
   }
 
   void readData() async {
@@ -446,6 +490,7 @@ class _StatuspageState extends State<Statuspage> {
       }
     }
     setupMarkers();
+    await getRider(orders[0].riderRid!);
     setState(() {});
   }
 

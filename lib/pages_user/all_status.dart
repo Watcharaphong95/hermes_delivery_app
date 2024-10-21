@@ -29,7 +29,7 @@ class _AllStatusState extends State<AllStatus> {
   var db = FirebaseFirestore.instance;
   late StreamSubscription listener;
   StreamSubscription<QuerySnapshot>? _subscription;
-
+  int riderMarker = 0;
   late GoogleMapController mapController;
 
   CameraPosition initPosition = const CameraPosition(
@@ -44,7 +44,7 @@ class _AllStatusState extends State<AllStatus> {
   final List<LatLng> targets = [];
 
   final Set<Polyline> _polylines = {};
-  List<Color> _markerColors = [];
+  final List<Color> _markerColors = [];
 
   @override
   void initState() {
@@ -162,81 +162,64 @@ class _AllStatusState extends State<AllStatus> {
             Container(
               margin: EdgeInsets.fromLTRB(
                   screenWidth * 0.1, screenHeight * 0.57, 0, 0),
-              child: SingleChildScrollView(
+              child: const SingleChildScrollView(
                 child: Column(
                   children: [
-                    const Text(
+                    Text(
                       "สถานะการจัดส่ง",
                       style: TextStyle(
                         fontSize: 17,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    SizedBox(
-                      width: screenWidth * 0.8,
-                      height: screenHeight * 0.35,
-                      child: _markers.isNotEmpty // เช็คว่า _markers ไม่ว่าง
-                          ? ListView.builder(
-                              itemCount: _markers.length,
-                              itemBuilder: (context, index) {
-                                var markersList = _markers.toList();
-                                var marker = markersList[index];
-
-                                // แสดงค่าของ title เพื่อการดีบัก
-                                print(
-                                    'Marker title: ${marker.infoWindow.title}');
-
-                                // กำหนดสีตามประเภทของ Marker
-                                Color color;
-                                if (marker.infoWindow.title!
-                                    .startsWith('Rider')) {
-                                  color = _getUniqueColor(
-                                      index); // ใช้สีที่แตกต่างกันสำหรับ Rider
-                                } else if (marker.infoWindow.title == 'You') {
-                                  color =
-                                      Colors.green; // ใช้สีเขียวสำหรับผู้ใช้
-                                } else if (marker.infoWindow.title!
-                                    .startsWith('Target')) {
-                                  color =
-                                      Colors.blue; // ใช้สีน้ำเงินสำหรับ Target
-                                } else {
-                                  color =
-                                      Colors.grey; // ไอคอนสีเทาสำหรับกรณีอื่น ๆ
-                                }
-
-                                // สร้าง customMarker ด้วยสีที่กำหนด
-                                Icon customMarker;
-                                if (marker.infoWindow.title!
-                                    .startsWith('Rider')) {
-                                  customMarker = Icon(Icons.motorcycle,
-                                      color: color, size: 24);
-                                } else if (marker.infoWindow.title == 'You') {
-                                  customMarker = Icon(Icons.person,
-                                      color: color, size: 24);
-                                } else if (marker.infoWindow.title!
-                                    .startsWith('Target')) {
-                                  customMarker = Icon(Icons.pin_drop,
-                                      color: color, size: 24);
-                                } else {
-                                  customMarker =
-                                      Icon(Icons.help, color: color, size: 24);
-                                }
-
-                                return Card(
-                                  child: ListTile(
-                                    leading: customMarker,
-                                    title: Text(
-                                        marker.infoWindow.title ?? 'Unknown'),
-                                  ),
-                                );
-                              },
-                            )
-                          : const Center(
-                              child: Text(
-                                  'ไม่พบข้อมูล')), // แสดงข้อความถ้าไม่มีข้อมูล
-                    )
                   ],
                 ),
+              ),
+            ),
+            Container(
+              margin: EdgeInsets.fromLTRB(
+                  screenWidth * 0.7, screenHeight * 0.56, 0, 0),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.pin_drop,
+                    color: _getUniqueColor(6),
+                    size: 50,
+                  ),
+                  const SizedBox(width: 10),
+                  const Text('You'),
+                ],
+              ),
+            ),
+            Container(
+              margin: EdgeInsets.fromLTRB(
+                  screenWidth * 0.1, screenHeight * 0.6, 0, 0),
+              width: screenWidth * 0.8,
+              height: screenHeight * 0.4,
+              child: ListView.builder(
+                itemCount: riders.length, // Number of items in the markers list
+                itemBuilder: (context, index) {
+                  return Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.directions_bike,
+                        color: _getUniqueColor(index),
+                        size: 50,
+                      ),
+                      const SizedBox(width: 10),
+                      Text('Rider $index'),
+                      const SizedBox(width: 10),
+                      Icon(
+                        Icons.pin_drop,
+                        color: _getUniqueColor(index),
+                        size: 50,
+                      ),
+                      const SizedBox(width: 10),
+                      Text('Target $index'),
+                    ],
+                  );
+                },
               ),
             ),
 
@@ -278,6 +261,7 @@ class _AllStatusState extends State<AllStatus> {
       await readDataSender();
     }
     _markers.clear();
+    _markerColors.clear();
     Future.delayed(const Duration(milliseconds: 200), () {
       _getMarkersRider();
     });
@@ -355,6 +339,7 @@ class _AllStatusState extends State<AllStatus> {
     log('this is marker ${_markers.toString()}');
     setState(() {
       _markers.clear();
+      _markerColors.clear();
       _polylines.clear();
     });
 
@@ -470,7 +455,7 @@ class _AllStatusState extends State<AllStatus> {
   Future<void> _addRiderMarker(LatLng rider, String distance, String duration,
       String riderLabel, Color color) async {
     double hueValue = HSVColor.fromColor(color).hue;
-
+    riderMarker++;
     BitmapDescriptor customMarker =
         BitmapDescriptor.defaultMarkerWithHue(hueValue);
     setState(() {
@@ -547,6 +532,7 @@ class _AllStatusState extends State<AllStatus> {
   void startRealtimeGet() {
     setState(() {
       _markers.clear();
+      _markerColors.clear();
       _polylines.clear();
     });
     final docRef =
