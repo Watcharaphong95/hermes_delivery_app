@@ -394,21 +394,29 @@ class _EditProfileUserpageState extends State<EditProfileUserpage> {
     String? phone = box.read('phone');
     String? uid = box.read('uid');
 
-    // ตรวจสอบว่า user[0].picture มีค่า
     if (user.isNotEmpty && user[0].picture.isNotEmpty) {
-      // ถ้ามีค่าให้กำหนดให้ image เป็น user[0].picture
-      pictureUrl = user[0].picture; // ใช้ URL ตรงๆ แทนการแปลงเป็น XFile
+      pictureUrl = user[0].picture;
     }
 
-    // ตรวจสอบว่า pictureUrl มีค่า
     if (pictureUrl == null) {
       log('Image is null or does not exist. Please select a valid image before updating the profile.');
-      return; // ออกจากฟังก์ชันถ้า pictureUrl เป็น null
+      return;
+    }
+    String fileName = DateTime.now().millisecondsSinceEpoch.toString();
+    Reference ref = FirebaseStorage.instance.ref();
+    Reference refUserProfile = ref.child('profile');
+    Reference imageToUpload = refUserProfile.child(fileName);
+
+    try {
+      await imageToUpload.putFile(File(image!.path));
+      log('test');
+      pictureUrl = await imageToUpload.getDownloadURL();
+      log(pictureUrl);
+    } catch (e) {
+      log('Error!');
     }
 
-    log('User picture: $pictureUrl'); // แสดง URL ของภาพที่กำหนด
-
-    // จากนี้ไปจะเป็นการอัปเดตข้อมูลโปรไฟล์ตามปกติ
+    log('User picture: $pictureUrl');
     var json = {
       "phone": phoneCtl.text.isNotEmpty ? phoneCtl.text : '',
       "name": nameCtl.text.isNotEmpty ? nameCtl.text : '',
@@ -503,9 +511,13 @@ class _EditProfileUserpageState extends State<EditProfileUserpage> {
 
         if (response.statusCode == 200) {
           log('Profile updated successfully!');
-          Navigator.of(context).pushReplacement(
-            MaterialPageRoute(builder: (context) => const Profilepage()),
-          );
+          // สำหรับการใช้ GetX
+          Get.offAll(Profilepage());
+
+          // หรือสำหรับการใช้ Navigator ทั่วไป
+          // Navigator.of(context).pushReplacement(
+          //   MaterialPageRoute(builder: (context) => Profilepage()),
+          // );
         } else {
           log('Failed to update profile: ${response.body}');
         }
