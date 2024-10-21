@@ -17,7 +17,7 @@ import 'package:intl/intl.dart' as intl; // Use this to initialize locale
 
 main() async {
   WidgetsFlutterBinding
-      .ensureInitialized(); // Ensures proper initialization for async code
+      .ensureInitialized(); // Ensures proper initializat ion for async code
   await firebase();
 
   await GetStorage.init();
