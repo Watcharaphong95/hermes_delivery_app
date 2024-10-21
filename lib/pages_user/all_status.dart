@@ -12,6 +12,7 @@ import 'package:hermes_app/config/config.dart';
 import 'package:hermes_app/models/response/order_firebase_res.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:http/http.dart' as http;
+import 'package:flutter/material.dart';
 
 class AllStatus extends StatefulWidget {
   bool isReceive;
@@ -43,6 +44,7 @@ class _AllStatusState extends State<AllStatus> {
   final List<LatLng> targets = [];
 
   final Set<Polyline> _polylines = {};
+  List<Color> _markerColors = [];
 
   @override
   void initState() {
@@ -158,19 +160,86 @@ class _AllStatusState extends State<AllStatus> {
               ),
             ),
             Container(
-              margin: EdgeInsets.fromLTRB(0, screenHeight * 0.56, 0, 0),
-              child: const SingleChildScrollView(
+              margin: EdgeInsets.fromLTRB(
+                  screenWidth * 0.1, screenHeight * 0.57, 0, 0),
+              child: SingleChildScrollView(
                 child: Column(
                   children: [
-                    Text("สถานะการจัดส่ง",
-                        style: TextStyle(
-                          fontSize: 17,
-                          fontWeight: FontWeight.bold,
-                        )),
+                    const Text(
+                      "สถานะการจัดส่ง",
+                      style: TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    SizedBox(
+                      width: screenWidth * 0.8,
+                      height: screenHeight * 0.35,
+                      child: _markers.isNotEmpty // เช็คว่า _markers ไม่ว่าง
+                          ? ListView.builder(
+                              itemCount: _markers.length,
+                              itemBuilder: (context, index) {
+                                var markersList = _markers.toList();
+                                var marker = markersList[index];
+
+                                // แสดงค่าของ title เพื่อการดีบัก
+                                print(
+                                    'Marker title: ${marker.infoWindow.title}');
+
+                                // กำหนดสีตามประเภทของ Marker
+                                Color color;
+                                if (marker.infoWindow.title!
+                                    .startsWith('Rider')) {
+                                  color = _getUniqueColor(
+                                      index); // ใช้สีที่แตกต่างกันสำหรับ Rider
+                                } else if (marker.infoWindow.title == 'You') {
+                                  color =
+                                      Colors.green; // ใช้สีเขียวสำหรับผู้ใช้
+                                } else if (marker.infoWindow.title!
+                                    .startsWith('Target')) {
+                                  color =
+                                      Colors.blue; // ใช้สีน้ำเงินสำหรับ Target
+                                } else {
+                                  color =
+                                      Colors.grey; // ไอคอนสีเทาสำหรับกรณีอื่น ๆ
+                                }
+
+                                // สร้าง customMarker ด้วยสีที่กำหนด
+                                Icon customMarker;
+                                if (marker.infoWindow.title!
+                                    .startsWith('Rider')) {
+                                  customMarker = Icon(Icons.motorcycle,
+                                      color: color, size: 24);
+                                } else if (marker.infoWindow.title == 'You') {
+                                  customMarker = Icon(Icons.person,
+                                      color: color, size: 24);
+                                } else if (marker.infoWindow.title!
+                                    .startsWith('Target')) {
+                                  customMarker = Icon(Icons.pin_drop,
+                                      color: color, size: 24);
+                                } else {
+                                  customMarker =
+                                      Icon(Icons.help, color: color, size: 24);
+                                }
+
+                                return Card(
+                                  child: ListTile(
+                                    leading: customMarker,
+                                    title: Text(
+                                        marker.infoWindow.title ?? 'Unknown'),
+                                  ),
+                                );
+                              },
+                            )
+                          : const Center(
+                              child: Text(
+                                  'ไม่พบข้อมูล')), // แสดงข้อความถ้าไม่มีข้อมูล
+                    )
                   ],
                 ),
               ),
             ),
+
             Positioned(
               top: screenHeight * 0.3,
               right: screenWidth * 0.1,
