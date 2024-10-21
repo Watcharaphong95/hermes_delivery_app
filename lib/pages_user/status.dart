@@ -267,7 +267,7 @@ class _StatuspageState extends State<Statuspage> {
                           borderRadius: BorderRadius.circular(8.0),
                         ),
                         child: InkWell(
-                          onTap: imagePicker,
+                          // onTap: imagePicker,
                           child: Center(
                             // Center the image within the container
                             child: (_activeButtonIndex == 2)

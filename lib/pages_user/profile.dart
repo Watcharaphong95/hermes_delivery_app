@@ -349,7 +349,7 @@ class _ProfilepageState extends State<Profilepage> {
                       MainAxisSize.min, // ขนาดของคอลัมน์จะใช้พื้นที่ที่จำเป็น
                   children: <Widget>[
                     const Padding(
-                      padding: EdgeInsets.fromLTRB(0, 30, 10, 0),
+                      padding: EdgeInsets.fromLTRB(0, 20, 10, 10),
                       child: Center(
                           child: Text(
                         "ยืนยันการออกจากระบบ",
@@ -359,42 +359,57 @@ class _ProfilepageState extends State<Profilepage> {
                         ),
                       )),
                     ),
-                    const SizedBox(height: 10), // เว้นพื้นที่
+                    const Divider(),
+                    const SizedBox(height: 15),
                     const Padding(
                       padding: EdgeInsets.all(5),
                       child: Text("คุณต้องการออกจากระบบหรือไม่?"),
                     ),
-                    const SizedBox(height: 10), // เว้นพื้นที่
-                    const Divider(), // เพิ่มเส้นขั้น
+                    const SizedBox(height: 15),
                     Padding(
                       padding: const EdgeInsets.fromLTRB(0, 5, 0, 10),
                       child: Row(
                         mainAxisAlignment:
                             MainAxisAlignment.spaceEvenly, // จัดเรียงปุ่ม
                         children: <Widget>[
-                          TextButton(
+                          FilledButton(
                             onPressed: () {
-                              Navigator.of(context)
-                                  .pop(false); // ผู้ใช้กด "ยกเลิก"
+                              Navigator.of(context).pop(false);
                             },
+                            style: FilledButton.styleFrom(
+                              backgroundColor: Colors
+                                  .grey, // เปลี่ยนเป็นสีที่ต้องการ เช่น สีเทาสำหรับปุ่ม "ยกเลิก"
+                              textStyle: const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                             child: const Text(
                               "ยกเลิก",
                               style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.black),
+                                color: Colors
+                                    .white, // สีข้อความให้ชัดเจนกับสีพื้นหลัง
+                              ),
                             ),
                           ),
-                          TextButton(
+                          FilledButton(
                             onPressed: () {
-                              Get.to(() => const LoginPage());
+                              Navigator.of(context).pop(true);
                             },
+                            style: FilledButton.styleFrom(
+                              backgroundColor: const Color(
+                                  0xFFFF7723), // เปลี่ยนสีพื้นหลังตามที่ต้องการ
+                              textStyle: const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                             child: const Text(
                               "ยืนยัน",
                               style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                  color: Color(0xFFFF7723)),
+                                color:
+                                    Colors.white, // สีตัวอักษรที่มองเห็นชัดเจน
+                              ),
                             ),
                           ),
                         ],

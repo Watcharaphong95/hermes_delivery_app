@@ -441,7 +441,7 @@ class _EditProfileUserpageState extends State<EditProfileUserpage> {
                   mainAxisSize: MainAxisSize.min,
                   children: <Widget>[
                     const Padding(
-                      padding: EdgeInsets.fromLTRB(0, 30, 10, 0),
+                      padding: EdgeInsets.fromLTRB(0, 20, 10, 10),
                       child: Center(
                         child: Text(
                           "ยืนยันการเปลี่ยนข้อมูล",
@@ -452,41 +452,55 @@ class _EditProfileUserpageState extends State<EditProfileUserpage> {
                         ),
                       ),
                     ),
+                    const Divider(),
                     const SizedBox(height: 10),
                     const Padding(
                       padding: EdgeInsets.all(5),
                       child: Text("คุณต้องการเปลี่ยนข้อมูลโปรไฟล์หรือไม่?"),
                     ),
                     const SizedBox(height: 10),
-                    const Divider(),
                     Padding(
                       padding: const EdgeInsets.fromLTRB(0, 5, 0, 10),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                         children: <Widget>[
-                          TextButton(
+                          FilledButton(
                             onPressed: () {
                               Navigator.of(context).pop(false);
                             },
+                            style: FilledButton.styleFrom(
+                              backgroundColor: Colors
+                                  .grey, // เปลี่ยนเป็นสีที่ต้องการ เช่น สีเทาสำหรับปุ่ม "ยกเลิก"
+                              textStyle: const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                             child: const Text(
                               "ยกเลิก",
                               style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.black,
+                                color: Colors
+                                    .white, // สีข้อความให้ชัดเจนกับสีพื้นหลัง
                               ),
                             ),
                           ),
-                          TextButton(
+                          FilledButton(
                             onPressed: () {
                               Navigator.of(context).pop(true);
                             },
+                            style: FilledButton.styleFrom(
+                              backgroundColor: const Color(
+                                  0xFFFF7723), // เปลี่ยนสีพื้นหลังตามที่ต้องการ
+                              textStyle: const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                             child: const Text(
                               "ยืนยัน",
                               style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                                color: Color(0xFFFF7723),
+                                color:
+                                    Colors.white, // สีตัวอักษรที่มองเห็นชัดเจน
                               ),
                             ),
                           ),
