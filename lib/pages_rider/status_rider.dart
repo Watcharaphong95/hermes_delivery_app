@@ -37,8 +37,8 @@ class _StatuspageState extends State<StatusRider> {
   final Set<Polyline> _polylines = {};
 
   var db = FirebaseFirestore.instance;
-  late StreamSubscription listener;
-  late Stream<Position> currentPosition;
+  late StreamSubscription? listener;
+  StreamSubscription<Position>? locationSubscription;
 
   List<OrderRes> orders = [];
 
@@ -61,17 +61,25 @@ class _StatuspageState extends State<StatusRider> {
     zoom: 15,
   );
 
-  int _activeButtonIndex = 0;
+  int _activeButtonIndex = 2;
 
   double screenWidth = 0;
   double screenHeight = 0;
   @override
   void initState() {
+    Future.delayed(const Duration(seconds: 2));
     super.initState();
     readData();
     startLocationUpdates();
     startRealtimeGet();
     log(widget.docId);
+  }
+
+  @override
+  void dispose() {
+    listener?.cancel(); // Cancel Firestore listener
+    locationSubscription?.cancel(); // Cancel location updates
+    super.dispose();
   }
 
   @override
@@ -209,44 +217,54 @@ class _StatuspageState extends State<StatusRider> {
                         screenWidth * 0.1,
                         0,
                       ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceAround,
-                        children: [
-                          _buildStatusStep('ไรเดอร์\nรับงาน', Icons.inbox,
-                              int.parse(orders[0].status) >= 1),
-                          _buildConnectorLine(int.parse(orders[0].status) >= 2),
-                          _buildStatusStep(
-                              'รอไรเดอร์\nมารับสินค้า',
-                              Icons.directions_bike,
-                              int.parse(orders[0].status) >= 2),
-                          _buildConnectorLine(int.parse(orders[0].status) >= 3),
-                          _buildStatusStep(
-                              'รับสินค้าแล้ว\nกำลังเดินทาง',
-                              Icons.local_shipping,
-                              int.parse(orders[0].status) >= 3),
-                          _buildConnectorLine(int.parse(orders[0].status) >= 4),
-                          _buildStatusStep('ส่งสินค้า\nเสร็จสิ้น',
-                              Icons.done_all, int.parse(orders[0].status) >= 4),
-                        ],
-                      ),
+                      child: orders.isNotEmpty
+                          ? Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceAround,
+                              children: [
+                                _buildStatusStep('ไรเดอร์\nรับงาน', Icons.inbox,
+                                    int.parse(orders[0].status) >= 1),
+                                _buildConnectorLine(
+                                    int.parse(orders[0].status) >= 2),
+                                _buildStatusStep(
+                                    'รอไรเดอร์\nมารับสินค้า',
+                                    Icons.directions_bike,
+                                    int.parse(orders[0].status) >= 2),
+                                _buildConnectorLine(
+                                    int.parse(orders[0].status) >= 3),
+                                _buildStatusStep(
+                                    'รับสินค้าแล้ว\nกำลังเดินทาง',
+                                    Icons.local_shipping,
+                                    int.parse(orders[0].status) >= 3),
+                                _buildConnectorLine(
+                                    int.parse(orders[0].status) >= 4),
+                                _buildStatusStep(
+                                    'ส่งสินค้า\nเสร็จสิ้น',
+                                    Icons.done_all,
+                                    int.parse(orders[0].status) >= 4),
+                              ],
+                            )
+                          : Container(),
                     ),
                     Padding(
-                      padding: EdgeInsets.fromLTRB(
-                          0, screenHeight * 0.01, 0, screenHeight * 0.01),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          _buildStatusButton(2, 'รอไรเดอร์\nมารับสินค้า',
-                              int.parse(orders[0].status) >= 1),
-                          const SizedBox(width: 8),
-                          _buildStatusButton(3, 'ไรเดอร์รับ\nสินค้า',
-                              int.parse(orders[0].status) >= 2),
-                          const SizedBox(width: 8),
-                          _buildStatusButton(4, 'ส่งสินค้า\nเสร็จสิ้น',
-                              int.parse(orders[0].status) >= 3),
-                        ],
-                      ),
-                    ),
+                        padding: EdgeInsets.fromLTRB(
+                            0, screenHeight * 0.01, 0, screenHeight * 0.01),
+                        child: orders.isNotEmpty
+                            ? Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  _buildStatusButton(
+                                      2,
+                                      'รอไรเดอร์\nมารับสินค้า',
+                                      int.parse(orders[0].status) >= 1),
+                                  const SizedBox(width: 8),
+                                  _buildStatusButton(3, 'ไรเดอร์รับ\nสินค้า',
+                                      int.parse(orders[0].status) >= 2),
+                                  const SizedBox(width: 8),
+                                  _buildStatusButton(4, 'ส่งสินค้า\nเสร็จสิ้น',
+                                      int.parse(orders[0].status) >= 3),
+                                ],
+                              )
+                            : Container()),
                     Padding(
                       padding: EdgeInsets.fromLTRB(
                         screenWidth * 0.1,
@@ -313,7 +331,7 @@ class _StatuspageState extends State<StatusRider> {
                 },
                 child: const Icon(Icons.my_location),
               ),
-            )
+            ),
           ],
         ),
       ),
@@ -335,6 +353,11 @@ class _StatuspageState extends State<StatusRider> {
 
     orders = [OrderRes.fromFirestore(result.data()!, result.id)];
 
+    if (int.parse(orders[0].status) > 3) {
+      Get.back();
+      Get.back();
+    }
+
     orders.sort((a, b) => b.createAt.compareTo(a.createAt));
 
     pickup = LatLng(orders[0].latSender!, orders[0].lngSender!);
@@ -346,26 +369,8 @@ class _StatuspageState extends State<StatusRider> {
       riders.add(LatLng(order.latRider!, order.lngRider!));
     }
     setupMarkers();
+
     setState(() {});
-  }
-
-  Future<void> checkRiderUid() async {
-    var check = await db
-        .collection("order")
-        .where('riderRid', isEqualTo: box.read('uid'))
-        .get();
-    if (check.docs.isEmpty) {
-      orders = check.docs.map((doc) {
-        return OrderRes.fromFirestore(doc.data(), doc.id);
-      }).toList();
-
-      Get.to(() => const HomeRiderpage());
-    } else {
-      await db.collection('order').doc(widget.docId).update({
-        'latRider': box.read('curLat'),
-        'lngRider': box.read('curLng'),
-      });
-    }
   }
 
   Future<void> setupMarkers() async {
@@ -380,6 +385,7 @@ class _StatuspageState extends State<StatusRider> {
   }
 
   Future<void> _getMarkers() async {
+    // log(riders.length.toString());
     setState(() {
       _markers.clear();
       _polylines.clear();
@@ -569,9 +575,9 @@ class _StatuspageState extends State<StatusRider> {
       distanceFilter: 10,
     );
 
-    currentPosition =
-        Geolocator.getPositionStream(locationSettings: locationSettings);
-    currentPosition.listen((Position position) async {
+    locationSubscription =
+        Geolocator.getPositionStream(locationSettings: locationSettings)
+            .listen((Position position) async {
       LatLng currentLocation = LatLng(position.latitude, position.longitude);
       await db.collection('order').doc(widget.docId).update({
         'latRider': position.latitude,
@@ -579,7 +585,9 @@ class _StatuspageState extends State<StatusRider> {
       });
       log('Current Location: $currentLocation');
     });
-    setState(() {});
+    if (mounted) {
+      setState(() {});
+    }
   }
 
   void startRealtimeGet() {
@@ -631,9 +639,7 @@ class _StatuspageState extends State<StatusRider> {
   }
 
   Widget _buildStatusButton(int index, String text, bool disable) {
-    log(disable.toString());
     bool isActive = _activeButtonIndex == index;
-    log(_activeButtonIndex.toString());
     return ElevatedButton(
       onPressed: !disable
           ? null
@@ -670,39 +676,48 @@ class _StatuspageState extends State<StatusRider> {
   }
 
   Image showImagePerStaus(double screenWidth, double screenHeight, int status) {
-    if (orders[0].picture != '' && status == 2) {
-      setState(() {});
-      return Image.network(
-        orders[0].picture, fit: BoxFit.contain,
-        width: screenWidth *
-            0.85, // Ensure the image doesn't overflow horizontally
-        height: screenHeight * 0.3,
-      );
-    } else if (orders[0].picture_2 != '' && status == 3) {
-      setState(() {});
-      return Image.network(
-        orders[0].picture_2, fit: BoxFit.contain,
-        width: screenWidth *
-            0.85, // Ensure the image doesn't overflow horizontally
-        height: screenHeight * 0.3,
-      );
-    } else if (orders[0].picture_3 != '' && status == 4) {
-      setState(() {});
-      return Image.network(
-        orders[0].picture_3, fit: BoxFit.contain,
-        width: screenWidth *
-            0.85, // Ensure the image doesn't overflow horizontally
-        height: screenHeight * 0.3,
-      );
-    } else if (image != null) {
-      return Image.file(
-        File(image!.path),
-        fit: BoxFit.contain,
-        width: screenWidth *
-            0.85, // Ensure the image doesn't overflow horizontally
-        height:
-            screenHeight * 0.3, // Ensure the image doesn't overflow vertically
-      );
+    if (orders.isNotEmpty) {
+      if (orders[0].picture != '' && status == 2) {
+        setState(() {});
+        return Image.network(
+          orders[0].picture, fit: BoxFit.contain,
+          width: screenWidth *
+              0.85, // Ensure the image doesn't overflow horizontally
+          height: screenHeight * 0.3,
+        );
+      } else if (orders[0].picture_2 != '' && status == 3) {
+        setState(() {});
+        return Image.network(
+          orders[0].picture_2, fit: BoxFit.contain,
+          width: screenWidth *
+              0.85, // Ensure the image doesn't overflow horizontally
+          height: screenHeight * 0.3,
+        );
+      } else if (orders[0].picture_3 != '' && status == 4) {
+        setState(() {});
+        return Image.network(
+          orders[0].picture_3, fit: BoxFit.contain,
+          width: screenWidth *
+              0.85, // Ensure the image doesn't overflow horizontally
+          height: screenHeight * 0.3,
+        );
+      } else if (image != null) {
+        return Image.file(
+          File(image!.path),
+          fit: BoxFit.contain,
+          width: screenWidth *
+              0.85, // Ensure the image doesn't overflow horizontally
+          height: screenHeight *
+              0.3, // Ensure the image doesn't overflow vertically
+        );
+      } else {
+        return Image.asset(
+          'assets/images/Logo_camera.png',
+          fit: BoxFit.contain, // Make sure the SVG fits properly
+          width: screenWidth * 0.85, // Same size for the SVG
+          height: screenHeight * 0.2, // Adjust the height for SVG
+        );
+      }
     } else {
       return Image.asset(
         'assets/images/Logo_camera.png',
@@ -818,38 +833,106 @@ class _StatuspageState extends State<StatusRider> {
     if (image == null) return;
 
     showDialog(
+        barrierDismissible: false,
         context: context,
         builder: (BuildContext context) {
           return AlertDialog(
             title: const Center(child: Text('ยืนยันรูปนี้?')),
-            content: Image.file(
-              File(image!.path), fit: BoxFit.contain,
-              width: screenWidth *
-                  0.85, // Ensure the image doesn't overflow horizontally
-              height: screenHeight * 0.3,
+            content: const Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [],
             ),
-            actions: [FilledButton(onPressed: () {}, child: const Text('OK'))],
+            actions: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  FilledButton(
+                      onPressed: () {
+                        Navigator.pop(context);
+                      },
+                      style: FilledButton.styleFrom(
+                          backgroundColor: Colors.orange,
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(5))),
+                      child: const Text('ยกเลิก')),
+                  FilledButton(
+                      onPressed: () async {
+                        await confirmImageStatus();
+                      },
+                      style: FilledButton.styleFrom(
+                          backgroundColor: Colors.orange,
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(5))),
+                      child: const Text('ตกลง')),
+                ],
+              )
+            ],
           );
         });
+  }
 
-    // setState(() {
-    //   _isLoading = true;
-    // });
+  Future<void> confirmImageStatus() async {
+    setState(() {
+      showLoadingDialog(context, true);
+    });
+    await imageUpload();
+    var data;
+    if (_activeButtonIndex == 3) {
+      data = {'picture_2': pictureUrl, 'status': 3};
+    } else if (_activeButtonIndex == 4) {
+      data = {'picture_3': pictureUrl, 'status': 4};
+    }
 
-    // await imageUpload();
-    // var data;
-    // if (_activeButtonIndex == 2) {
-    //   data = {'picture_2': pictureUrl, 'status': 3};
-    // } else if (_activeButtonIndex == 3) {
-    //   data = {'picture_3': pictureUrl, 'status': 4};
-    // }
+    await db.collection('order').doc(widget.docId).update(data);
 
-    // await db.collection('order').doc(widget.docId).update(data);
+    image = null;
 
-    // image = null;
-    // setState(() {
-    //   _isLoading = false;
-    // });
+    if (_activeButtonIndex == 3) {
+      _activeButtonIndex == 4;
+    }
+
+    await Future.delayed(const Duration(seconds: 4));
+
+    if (mounted) {
+      Navigator.pop(context);
+      Navigator.pop(context);
+    }
+  }
+
+  void showLoadingDialog(BuildContext context, bool isLoading) {
+    if (!isLoading) return;
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return const Center(
+          child: AlertDialog(
+            backgroundColor: Colors.transparent,
+            content: Padding(
+              padding: EdgeInsets.symmetric(vertical: 20),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  SizedBox(
+                    height: 100,
+                    width: 100,
+                    child: CircularProgressIndicator(
+                      color: Colors.orange,
+                      strokeWidth: 10,
+                    ),
+                  ),
+                  SizedBox(height: 20), // Space between the indicator and text
+                  Text(
+                    "กำลังโหลด...",
+                    style: TextStyle(color: Colors.white),
+                  ), // Optional loading text
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
   }
 
   Future<void> imageUpload() async {

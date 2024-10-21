@@ -11,7 +11,7 @@ class OrderRes {
   final String picture_3;
   final String documentId;
   final String status;
-  final String? riderUid; // Nullable rider UID
+  final String? riderRid; // Nullable rider UID
   final String item;
   final String senderName;
   final String receiverName;
@@ -34,7 +34,7 @@ class OrderRes {
     required this.picture_3,
     required this.documentId,
     required this.status,
-    this.riderUid,
+    this.riderRid,
     required this.item,
     required this.senderName,
     required this.receiverName,
@@ -61,7 +61,7 @@ class OrderRes {
       picture_3: data['picture_3'] ?? '',
       documentId: documentId,
       status: data['status'].toString(), // Ensure status is a string
-      riderUid: data['riderUid']?.toString(),
+      riderRid: data['riderRid']?.toString(),
       item: data['item'] ?? '',
       senderName: data['senderName'] ?? '',
       receiverName: data['receiverName'] ?? '',

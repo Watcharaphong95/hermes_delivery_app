@@ -42,15 +42,15 @@ class _HomeRiderpageState extends State<HomeRiderpage> {
   final Set<Marker> _markers = {};
   late GoogleMapController mapController;
 
-  late Stream<Position> currentPosition;
+  StreamSubscription<Position>? locationSubscription;
   late LatLng currentLatLng;
 
   @override
   void initState() {
     super.initState();
     getApiKey();
-    startRealtimeGet();
     startLocationUpdates();
+    startRealtimeGet();
     currentLatLng = LatLng(box.read('curLat'), box.read('curLng'));
     initPosition = CameraPosition(
       target: LatLng(box.read('curLat'), box.read('curLng')),
@@ -58,12 +58,22 @@ class _HomeRiderpageState extends State<HomeRiderpage> {
   }
 
   @override
+  void dispose() {
+    listener?.cancel(); // Cancel Firestore listener
+    locationSubscription?.cancel(); // Cancel location updates
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     screenWidth = MediaQuery.of(context).size.width;
     screenHeight = MediaQuery.of(context).size.height;
     return PopScope(
+      canPop: false,
       onPopInvoked: (didpop) async {
-        listener.cancel();
+        if (listener != null) {
+          listener?.cancel();
+        }
       },
       child: Scaffold(
         backgroundColor: Colors.white,
@@ -235,99 +245,101 @@ class _HomeRiderpageState extends State<HomeRiderpage> {
     _addMarkerReceiver(item);
     _addMarkerRider();
     _addMarkerSender(item);
-    showDialog(
-      context: context,
-      builder: (context) {
-        return SizedBox(
-          height: screenHeight * 0.1,
-          child: AlertDialog(
-            title: const Center(child: Text('Order Details')),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                SizedBox(
-                  width: screenWidth,
-                  height: screenHeight * 0.3,
-                  child: SizedBox(
-                    child: GoogleMap(
-                      mapType: MapType.normal,
-                      initialCameraPosition: initPosition,
-                      myLocationEnabled: false,
-                      markers: _markers,
-                      onMapCreated: (GoogleMapController controller) {
-                        mapController = controller;
-                        Future.delayed(const Duration(milliseconds: 200), () {
-                          _fitAllMarkers();
-                        }); // Fit all markers when the map is created
-                      },
-                      zoomGesturesEnabled: true, // Disable zoom gestures
-                      scrollGesturesEnabled: true,
-                      zoomControlsEnabled: true, // Disable zoom controls
-                      myLocationButtonEnabled: false,
+    if (mounted) {
+      showDialog(
+        context: context,
+        builder: (context) {
+          return SizedBox(
+            height: screenHeight * 0.1,
+            child: AlertDialog(
+              title: const Center(child: Text('Order Details')),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  SizedBox(
+                    width: screenWidth,
+                    height: screenHeight * 0.3,
+                    child: SizedBox(
+                      child: GoogleMap(
+                        mapType: MapType.normal,
+                        initialCameraPosition: initPosition,
+                        myLocationEnabled: false,
+                        markers: _markers,
+                        onMapCreated: (GoogleMapController controller) {
+                          mapController = controller;
+                          Future.delayed(const Duration(milliseconds: 200), () {
+                            _fitAllMarkers();
+                          }); // Fit all markers when the map is created
+                        },
+                        zoomGesturesEnabled: true, // Disable zoom gestures
+                        scrollGesturesEnabled: true,
+                        zoomControlsEnabled: true, // Disable zoom controls
+                        myLocationButtonEnabled: false,
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(
-                  height: 10,
-                ),
-                Text(
-                  'ระยะทางถึงผู้ส่ง: ${distanceToSender.toStringAsFixed(2)} กม',
-                  style: const TextStyle(
-                      fontSize: 18, fontWeight: FontWeight.bold),
-                ),
-                Text(
-                  'ระยะทางถึงผู้รับ: ${distanceToReceiver.toStringAsFixed(2)} กม',
-                  style: const TextStyle(
-                      fontSize: 18, fontWeight: FontWeight.bold),
-                ),
+                  const SizedBox(
+                    height: 10,
+                  ),
+                  Text(
+                    'ระยะทางถึงผู้ส่ง: ${distanceToSender.toStringAsFixed(2)} กม',
+                    style: const TextStyle(
+                        fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  Text(
+                    'ระยะทางถึงผู้รับ: ${distanceToReceiver.toStringAsFixed(2)} กม',
+                    style: const TextStyle(
+                        fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'ผู้ส่ง: ${item.senderName}',
+                        style: const TextStyle(fontSize: 16),
+                      ),
+                      Text('ผู้รับ: ${item.receiverName}',
+                          style: const TextStyle(fontSize: 16)),
+                    ],
+                  ),
+                ],
+              ),
+              actions: [
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(
-                      'ผู้ส่ง: ${item.senderName}',
-                      style: const TextStyle(fontSize: 16),
+                    FilledButton(
+                      onPressed: () {
+                        Get.back(); // Closes the dialog
+                      },
+                      child: const Text('กลับ'),
                     ),
-                    Text('ผู้รับ: ${item.receiverName}',
-                        style: const TextStyle(fontSize: 16)),
+                    FilledButton(
+                      onPressed: () async {
+                        if (item.riderRid == null) {
+                          await db
+                              .collection('order')
+                              .doc(item.documentId)
+                              .update({
+                            'riderRid': box.read('uid'),
+                            'latRider': box.read('curLat'),
+                            'lngRider': box.read('curLng'),
+                            'status': 2
+                          });
+
+                          Get.to(() => StatusRider(docId: item.documentId));
+                        }
+                      },
+                      child: const Text('รับงาน'),
+                    ),
                   ],
                 ),
               ],
             ),
-            actions: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  FilledButton(
-                    onPressed: () {
-                      Get.back(); // Closes the dialog
-                    },
-                    child: const Text('กลับ'),
-                  ),
-                  FilledButton(
-                    onPressed: () async {
-                      if (item.riderUid == null) {
-                        await db
-                            .collection('order')
-                            .doc(item.documentId)
-                            .update({
-                          'riderRid': box.read('uid'),
-                          'latRider': box.read('curLat'),
-                          'lngRider': box.read('curLng'),
-                          'status': 2
-                        });
-
-                        Get.to(() => StatusRider(docId: item.documentId));
-                      }
-                    },
-                    child: const Text('รับงาน'),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        );
-      },
-    );
+          );
+        },
+      );
+    }
   }
 
   Future<void> getApiKey() async {
@@ -338,7 +350,7 @@ class _HomeRiderpageState extends State<HomeRiderpage> {
     });
   }
 
-  void readData() async {
+  Future<void> readData() async {
     await initializeDateFormatting('th', null);
 
     var check = await db
@@ -349,21 +361,35 @@ class _HomeRiderpageState extends State<HomeRiderpage> {
       ordersReceive = check.docs.map((doc) {
         return OrderRes.fromFirestore(doc.data(), doc.id);
       }).toList();
-      Get.to(() => StatusRider(docId: ordersReceive[0].documentId));
-    }
 
+      List<OrderRes> orders;
+      orders = ordersReceive
+          .where((order) =>
+              int.parse(order.status) > 1 && int.parse(order.status) < 4)
+          .toList();
+      for (var order in orders) {
+        log(order.status);
+      }
+      if (orders.isNotEmpty) {
+        Get.to(() => StatusRider(docId: orders[0].documentId));
+      }
+    }
     var result =
         await db.collection('order').where('status', isEqualTo: 1).get();
     // log(result.docs.length.toString());
 
-    ordersReceive = result.docs.map((doc) {
+    ordersReceive =
+        result.docs.where((doc) => doc.data()['riderRid'] == null).map((doc) {
       return OrderRes.fromFirestore(doc.data(), doc.id);
     }).toList();
+    log(ordersReceive.length.toString());
 
     // Sort by time latest first
-    ordersReceive.sort((a, b) => b.createAt.compareTo(a.createAt));
+    ordersReceive.sort((a, b) => a.createAt.compareTo(b.createAt));
 
-    setState(() {});
+    if (mounted) {
+      setState(() {});
+    }
   }
 
   void _addMarkerRider() {
@@ -397,10 +423,10 @@ class _HomeRiderpageState extends State<HomeRiderpage> {
     ));
   }
 
-  void startCheckOrder() {
-    final docRef =
+  Future<void> startCheckOrder() async {
+    final docRef1 =
         db.collection("order").where('riderRid', isEqualTo: box.read('uid'));
-    docRef.snapshots().listen((event) {
+    docRef1.snapshots().listen((event) {
       setState(() {
         readData();
       });
@@ -408,23 +434,25 @@ class _HomeRiderpageState extends State<HomeRiderpage> {
   }
 
   Future<void> startRealtimeGet() async {
-    final docRef = db.collection("order");
-    docRef.snapshots().listen((event) {
-      setState(() {
-        readData();
-      });
+    final docRef = db.collection("order").where("status", isEqualTo: 1);
+    listener = docRef.snapshots().listen((event) {
+      if (mounted) {
+        setState(() {
+          readData();
+        });
+      }
     }, onError: (error) => log("Listen failed"));
   }
 
-  void startLocationUpdates() {
+  Future<void> startLocationUpdates() async {
     LocationSettings locationSettings = const LocationSettings(
       accuracy: LocationAccuracy.high,
       distanceFilter: 10,
     );
 
-    currentPosition =
-        Geolocator.getPositionStream(locationSettings: locationSettings);
-    currentPosition.listen((Position position) async {
+    locationSubscription =
+        Geolocator.getPositionStream(locationSettings: locationSettings)
+            .listen((Position position) async {
       currentLatLng = LatLng(position.latitude, position.longitude);
       log('Current Location: $currentLatLng');
     });
@@ -474,5 +502,41 @@ class _HomeRiderpageState extends State<HomeRiderpage> {
     } else {
       print('No markers to fit.');
     }
+  }
+
+  void showLoadingDialog(BuildContext context, bool isLoading) {
+    if (!isLoading) return;
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return const Center(
+          child: AlertDialog(
+            backgroundColor: Colors.transparent,
+            content: Padding(
+              padding: EdgeInsets.symmetric(vertical: 20),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  SizedBox(
+                    height: 100,
+                    width: 100,
+                    child: CircularProgressIndicator(
+                      color: Colors.orange,
+                      strokeWidth: 10,
+                    ),
+                  ),
+                  SizedBox(height: 20), // Space between the indicator and text
+                  Text(
+                    "กำลังโหลด...",
+                    style: TextStyle(color: Colors.white),
+                  ), // Optional loading text
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
   }
 }
