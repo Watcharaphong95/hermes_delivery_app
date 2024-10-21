@@ -26,6 +26,8 @@ class _LoginPageState extends State<LoginPage> {
   TextEditingController passwordCtl = TextEditingController();
   String url = '';
   bool rememberMe = false; // ตัวแปรสำหรับจดจำผู้ใช้
+  late double screenWidth;
+  late double screenHeight;
 
   @override
   void initState() {
@@ -42,8 +44,8 @@ class _LoginPageState extends State<LoginPage> {
   @override
   Widget build(BuildContext context) {
     // Screen dimensions
-    double screenWidth = MediaQuery.of(context).size.width;
-    double screenHeight = MediaQuery.of(context).size.height;
+    screenWidth = MediaQuery.of(context).size.width;
+    screenHeight = MediaQuery.of(context).size.height;
     final keyboardHeight =
         MediaQuery.of(context).viewInsets.bottom; // Keyboard height
 
@@ -272,20 +274,25 @@ class _LoginPageState extends State<LoginPage> {
         );
 
         log('Response status code: ${response.statusCode}');
-        log('Response body: ${response.body}'); // เพิ่มการ log response body เพื่อดูว่ามีข้อมูลอะไรที่ถูกส่งกลับมา
+        log('Response body: ${response.body}');
 
         if (response.statusCode == 200) {
           log('Login request successful.');
           var user = selectUserAllFromJson(response.body);
+
+          // ตรวจสอบว่า user มีข้อมูลหรือไม่
+          if (user == null) {
+            showErrorDialog(
+                'หมายเลขโทรศัพท์หรือรหัสผ่านไม่ถูกต้อง\nกรุณาลองอีกครั้ง');
+            return;
+          }
+
           log('Login success: ${user.phone}');
 
           // บันทึกข้อมูลใน GetStorage
           box.write('phone', user.phone);
-          if (user.uid != null) {
-            box.write('uid', user.uid.toString());
-          } else {
-            box.write('uid', user.rid.toString());
-          }
+          box.write('uid',
+              user.uid != null ? user.uid.toString() : user.rid.toString());
 
           // บันทึกสถานะ "จดจำฉัน"
           if (rememberMe) {
@@ -319,7 +326,8 @@ class _LoginPageState extends State<LoginPage> {
       } catch (e) {
         // จับ error และ log ข้อความเพื่อดูรายละเอียด
         log('Login error: $e');
-        showErrorDialog('เกิดข้อผิดพลาดในการเชื่อมต่อ: $e');
+        showErrorDialog(
+            'หมายเลขโทรศัพท์หรือรหัสผ่านไม่ถูกต้อง\nกรุณาลองอีกครั้ง');
       }
     } else {
       if (phoneCtl.text.isEmpty) {
@@ -347,39 +355,54 @@ class _LoginPageState extends State<LoginPage> {
               mainAxisSize: MainAxisSize.min,
               children: <Widget>[
                 const Padding(
-                  padding: EdgeInsets.fromLTRB(0, 30, 10, 0),
+                  padding: EdgeInsets.fromLTRB(0, 25, 10, 10),
                   child: Center(
                     child: Text(
-                      "ข้อผิดพลาด!", // "Error"
+                      "เกิดข้อผิดพลาด!", // "Error"
                       style: TextStyle(
-                        fontSize: 20,
+                        fontSize: 23,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
                   ),
                 ),
+                const Divider(),
                 const SizedBox(height: 10),
                 Padding(
-                  padding: const EdgeInsets.all(5),
-                  child: Text(message, textAlign: TextAlign.center),
+                  padding: const EdgeInsets.all(10),
+                  child: Text(
+                    message, // แสดงข้อความข้อผิดพลาด
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontSize: 15,
+                    ),
+                  ),
                 ),
                 const SizedBox(height: 10),
-                const Divider(),
                 Padding(
                   padding: const EdgeInsets.fromLTRB(0, 5, 0, 10),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: <Widget>[
-                      TextButton(
-                        onPressed: () {
-                          Navigator.of(context).pop();
-                        },
-                        child: const Text(
-                          "ตกลง", // "OK"
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFFFF7723), // สีส้ม
+                      SizedBox(
+                        width: screenWidth * 0.6,
+                        height: screenHeight * 0.06,
+                        child: FilledButton(
+                          onPressed: () {
+                            Navigator.pop(context);
+                          },
+                          style: ButtonStyle(
+                            backgroundColor: MaterialStateProperty.all(
+                                Color(0xFFFF7723)), // สีพื้นหลัง
+                          ),
+                          child: const Text(
+                            'ตกลง',
+                            style: TextStyle(
+                              fontSize: 20,
+                              color: Colors
+                                  .white, // เปลี่ยนสีข้อความให้เหมาะสมกับพื้นหลัง
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ),
                       ),

@@ -400,9 +400,9 @@ class _SendItemState extends State<SendItem> {
     setState(() {
       _isLoading = true;
     });
+    showLoadingDialog(context, true);
 
     await imageUpload();
-
     var res = await http.get(Uri.parse('$url/user/${receiverData[0].uid}'));
     var receiver = selectUserUidFromJson(res.body);
 
@@ -427,6 +427,83 @@ class _SendItemState extends State<SendItem> {
       'latRider': null,
       'lngRider': null,
     };
+    Navigator.of(context).pop();
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Container(
+            width: MediaQuery.of(context).size.width * 0.8,
+            padding: const EdgeInsets.all(0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                const Padding(
+                  padding: EdgeInsets.fromLTRB(0, 25, 10, 10),
+                  child: Center(
+                    child: Text(
+                      "สำเร็จ!", // "Success"
+                      style: TextStyle(
+                        fontSize: 23,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+                const Divider(),
+                const SizedBox(height: 10),
+                const Padding(
+                  padding: EdgeInsets.all(10),
+                  child: Text(
+                    "ส่งของเรียบร้อยแล้ว", // "Item sent successfully"
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 15,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                // const Divider(),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(0, 5, 0, 10),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: <Widget>[
+                      SizedBox(
+                        width: screenWidth * 0.6,
+                        height: screenHeight * 0.06,
+                        child: FilledButton(
+                          onPressed: () {
+                            Navigator.pop(context);
+                            Navigator.pop(context);
+                          },
+                          style: ButtonStyle(
+                            backgroundColor: MaterialStateProperty.all(
+                                Color(0xFFFF7723)), // สีพื้นหลัง
+                          ),
+                          child: const Text(
+                            'ตกลง',
+                            style: TextStyle(
+                              fontSize: 20,
+                              color: Colors
+                                  .white, // เปลี่ยนสีข้อความให้เหมาะสมกับพื้นหลัง
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
 
     await db
         .collection('order')
@@ -453,5 +530,41 @@ class _SendItemState extends State<SendItem> {
     } catch (e) {
       log('Error!');
     }
+  }
+
+  void showLoadingDialog(BuildContext context, bool isLoading) {
+    if (!isLoading) return;
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return const Center(
+          child: AlertDialog(
+            backgroundColor: Colors.transparent,
+            content: Padding(
+              padding: EdgeInsets.symmetric(vertical: 20),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  SizedBox(
+                    height: 100,
+                    width: 100,
+                    child: CircularProgressIndicator(
+                      color: Colors.orange,
+                      strokeWidth: 10,
+                    ),
+                  ),
+                  SizedBox(height: 20), // Space between the indicator and text
+                  Text(
+                    "กำลังโหลด...",
+                    style: TextStyle(color: Colors.white),
+                  ), // Optional loading text
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
   }
 }
