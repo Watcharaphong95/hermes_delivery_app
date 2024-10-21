@@ -263,7 +263,6 @@ class _LoginPageState extends State<LoginPage> {
 
       var config = await Configuration.getConfig();
       url = config['apiEndPoint'];
-
       try {
         // ส่งคำขอเข้าสู่ระบบไปยัง API
         final response = await http.post(

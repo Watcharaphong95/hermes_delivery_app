@@ -19,7 +19,9 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'package:http/http.dart' as http;
 
 class HomeRiderpage extends StatefulWidget {
-  const HomeRiderpage({super.key});
+  const HomeRiderpage({
+    super.key,
+  });
 
   @override
   State<HomeRiderpage> createState() => _HomeRiderpageState();
@@ -45,8 +47,11 @@ class _HomeRiderpageState extends State<HomeRiderpage> {
   StreamSubscription<Position>? locationSubscription;
   late LatLng currentLatLng;
 
+  String docOrderId = "";
+
   @override
   void initState() {
+    checkOrder();
     super.initState();
     getApiKey();
     startLocationUpdates();
@@ -342,6 +347,27 @@ class _HomeRiderpageState extends State<HomeRiderpage> {
     }
   }
 
+  Future<void> checkOrder() async {
+    var check = await db
+        .collection("order")
+        .where('riderRid', isEqualTo: box.read('uid'))
+        .get();
+    if (check.docs.isNotEmpty) {
+      ordersReceive = check.docs.map((doc) {
+        return OrderRes.fromFirestore(doc.data(), doc.id);
+      }).toList();
+
+      List<OrderRes> orders =
+          ordersReceive.where((order) => int.parse(order.status) < 4).toList();
+      for (var order in orders) {
+        log("ORDERS:${order.status}");
+      }
+      if (orders.isNotEmpty && orders[0].documentId != '') {
+        Get.to(() => StatusRider(docId: orders[0].documentId));
+      }
+    }
+  }
+
   Future<void> getApiKey() async {
     await Configuration.getConfig().then((config) {
       setState(() {
@@ -352,28 +378,6 @@ class _HomeRiderpageState extends State<HomeRiderpage> {
 
   Future<void> readData() async {
     await initializeDateFormatting('th', null);
-
-    var check = await db
-        .collection("order")
-        .where('riderRid', isEqualTo: box.read('uid'))
-        .get();
-    if (check.docs.isNotEmpty) {
-      ordersReceive = check.docs.map((doc) {
-        return OrderRes.fromFirestore(doc.data(), doc.id);
-      }).toList();
-
-      List<OrderRes> orders;
-      orders = ordersReceive
-          .where((order) =>
-              int.parse(order.status) > 1 && int.parse(order.status) < 4)
-          .toList();
-      for (var order in orders) {
-        log(order.status);
-      }
-      if (orders.isNotEmpty) {
-        Get.to(() => StatusRider(docId: orders[0].documentId));
-      }
-    }
     var result =
         await db.collection('order').where('status', isEqualTo: 1).get();
     // log(result.docs.length.toString());
@@ -382,7 +386,7 @@ class _HomeRiderpageState extends State<HomeRiderpage> {
         result.docs.where((doc) => doc.data()['riderRid'] == null).map((doc) {
       return OrderRes.fromFirestore(doc.data(), doc.id);
     }).toList();
-    log(ordersReceive.length.toString());
+    // log(ordersReceive.length.toString());
 
     // Sort by time latest first
     ordersReceive.sort((a, b) => a.createAt.compareTo(b.createAt));

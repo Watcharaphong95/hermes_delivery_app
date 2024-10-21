@@ -17,7 +17,7 @@ class NavbottompageRider extends StatefulWidget {
 
 class _NavbottomState extends State<NavbottompageRider> {
   late final List<Widget> pageOptions;
-  @override
+
   @override
   void initState() {
     pageOptions = [const HomeRiderpage(), const ProfileRider()];

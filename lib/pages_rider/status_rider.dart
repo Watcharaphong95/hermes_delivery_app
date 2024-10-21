@@ -14,6 +14,8 @@ import 'package:get_storage/get_storage.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:hermes_app/config/config.dart';
 import 'package:hermes_app/models/response/order_firebase_res.dart';
+import 'package:hermes_app/models/response/user_search_res.dart';
+import 'package:hermes_app/navbar/navbottomRider.dart';
 import 'package:hermes_app/pages_rider/home_rider.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
@@ -31,6 +33,9 @@ class _StatuspageState extends State<StatusRider> {
   final box = GetStorage();
   PolylinePoints polylinePoints = PolylinePoints();
   String apiKey = "";
+  String url = "";
+  List<PhoneSearchRes> senderData = [];
+  List<PhoneSearchRes> receiverData = [];
   bool isLoadingMap = true;
   late GoogleMapController mapController;
   Set<Marker> _markers = {};
@@ -47,11 +52,11 @@ class _StatuspageState extends State<StatusRider> {
   late LatLng destination;
   late LatLng pickup;
 
-  bool _isLoading = false;
   String pictureUrl = '';
   final ImagePicker picker = ImagePicker();
   XFile? image;
 
+  double minDistance = 0;
   String distance = '';
   String duration = '';
   bool distanceAccpet = false;
@@ -257,11 +262,19 @@ class _StatuspageState extends State<StatusRider> {
                                       'รอไรเดอร์\nมารับสินค้า',
                                       int.parse(orders[0].status) >= 1),
                                   const SizedBox(width: 8),
-                                  _buildStatusButton(3, 'ไรเดอร์รับ\nสินค้า',
-                                      int.parse(orders[0].status) >= 2),
+                                  _buildStatusButton(
+                                      3,
+                                      'ไรเดอร์รับ\nสินค้า',
+                                      int.parse(orders[0].status) >= 2 &&
+                                              minDistance < 20 ||
+                                          orders[0].picture_2 != ''),
                                   const SizedBox(width: 8),
-                                  _buildStatusButton(4, 'ส่งสินค้า\nเสร็จสิ้น',
-                                      int.parse(orders[0].status) >= 3),
+                                  _buildStatusButton(
+                                      4,
+                                      'ส่งสินค้า\nเสร็จสิ้น',
+                                      int.parse(orders[0].status) >= 3 &&
+                                              minDistance < 20 ||
+                                          orders[0].picture_3 != ''),
                                 ],
                               )
                             : Container()),
@@ -280,7 +293,15 @@ class _StatuspageState extends State<StatusRider> {
                           borderRadius: BorderRadius.circular(8.0),
                         ),
                         child: InkWell(
-                          onTap: imagePicker,
+                          onTap: orders.isNotEmpty &&
+                                  ((_activeButtonIndex == 2 &&
+                                          orders[0].picture.isEmpty) ||
+                                      (_activeButtonIndex == 3 &&
+                                          orders[0].picture_2.isEmpty) ||
+                                      (_activeButtonIndex == 4 &&
+                                          orders[0].picture_3.isEmpty))
+                              ? imagePicker
+                              : null,
                           child: Center(
                             // Center the image within the container
                             child: (_activeButtonIndex == 2)
@@ -305,13 +326,98 @@ class _StatuspageState extends State<StatusRider> {
                         width: screenWidth * 0.5,
                         height: screenHeight * 0.06,
                         child: FilledButton(
-                          onPressed: addPicturePerStatus,
+                          onPressed: image != null ? addPicturePerStatus : null,
                           style: FilledButton.styleFrom(
                               backgroundColor: Colors.orange,
                               shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(5))),
-                          child: const Text('TEST'),
+                          child: const Text('ยืนยันรูป'),
                         ),
+                      ),
+                    ),
+                    Padding(
+                      padding: EdgeInsets.fromLTRB(
+                          0, screenHeight * 0.005, 0, screenHeight * 0.03),
+                      child: Column(
+                        children: [
+                          Padding(
+                            padding:
+                                EdgeInsets.fromLTRB(screenWidth * 0.1, 0, 0, 0),
+                            child: const Row(
+                              children: [
+                                Text(
+                                  'รายละเอียดออเดอร์',
+                                  style: TextStyle(
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.bold),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Padding(
+                            padding: EdgeInsets.symmetric(
+                                horizontal: screenWidth * 0.1),
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color:
+                                    Colors.lightBlue[100], // Background color
+                                borderRadius: BorderRadius.circular(
+                                    12), // Rounded corners
+                                boxShadow: const [
+                                  BoxShadow(
+                                    color: Colors.black26, // Shadow color
+                                    offset: Offset(0, 4), // Shadow offset
+                                    blurRadius: 8, // Shadow blur
+                                  ),
+                                ],
+                              ),
+                              padding: const EdgeInsets.all(
+                                  16.0), // Internal padding
+                              child: senderData.isNotEmpty
+                                  ? Text(
+                                      'ผู้ส่ง\n'
+                                      'ชื่อ: ${senderData[0].name}\n'
+                                      'ที่อยู่: ${senderData[0].address}\n'
+                                      'เบอร์โทร: ${senderData[0].phone}',
+                                      style: const TextStyle(fontSize: 18),
+                                    )
+                                  : const Text(''),
+                            ),
+                          ),
+                          SizedBox(
+                            height: screenHeight * 0.005,
+                          ),
+                          Padding(
+                            padding: EdgeInsets.symmetric(
+                                horizontal: screenWidth * 0.1),
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color:
+                                    Colors.lightGreen[100], // Background color
+                                borderRadius: BorderRadius.circular(
+                                    12), // Rounded corners
+                                boxShadow: const [
+                                  BoxShadow(
+                                    color: Colors.black26, // Shadow color
+                                    offset: Offset(0, 4), // Shadow offset
+                                    blurRadius: 8, // Shadow blur
+                                  ),
+                                ],
+                              ),
+                              padding: const EdgeInsets.all(
+                                  16.0), // Internal padding
+                              child: receiverData.isNotEmpty
+                                  ? Text(
+                                      'ผู้รับ\n'
+                                      'ชื่อ: ${receiverData[0].name}\n'
+                                      'ที่อยู่: ${receiverData[0].address}\n'
+                                      'เบอร์โทร: ${receiverData[0].phone}',
+                                      style: const TextStyle(fontSize: 18),
+                                    )
+                                  : const Text(''),
+                            ),
+                          )
+                        ],
                       ),
                     ),
                   ],
@@ -344,6 +450,23 @@ class _StatuspageState extends State<StatusRider> {
         apiKey = config['apiKey'];
       });
     });
+    await Configuration.getConfig().then((config) {
+      url = config['apiEndPoint'];
+    });
+  }
+
+  Future<void> getUserSender() async {
+    var res = await http.get(Uri.parse('$url/user/${orders[0].senderUid}'));
+    senderData = phoneSearchResFromJson(res.body);
+    log(senderData[0].name);
+    setState(() {});
+  }
+
+  Future<void> getUserReceiver() async {
+    var res = await http.get(Uri.parse('$url/user/${orders[0].receiverUid}'));
+    receiverData = phoneSearchResFromJson(res.body);
+    log(receiverData[0].name);
+    setState(() {});
   }
 
   void readData() async {
@@ -353,9 +476,10 @@ class _StatuspageState extends State<StatusRider> {
 
     orders = [OrderRes.fromFirestore(result.data()!, result.id)];
 
+    log('orders ${orders[0].status}');
     if (int.parse(orders[0].status) > 3) {
-      Get.back();
-      Get.back();
+      Get.to(() =>
+          NavbottompageRider(selectedPages: 0, phoneNumber: box.read('phone')));
     }
 
     orders.sort((a, b) => b.createAt.compareTo(a.createAt));
@@ -369,7 +493,12 @@ class _StatuspageState extends State<StatusRider> {
       riders.add(LatLng(order.latRider!, order.lngRider!));
     }
     setupMarkers();
-
+    if (senderData.isEmpty) {
+      await getUserSender();
+    }
+    if (receiverData.isEmpty) {
+      await getUserReceiver();
+    }
     setState(() {});
   }
 
@@ -474,6 +603,13 @@ class _StatuspageState extends State<StatusRider> {
         log("Failed to load directions for origin: $rider - ${response.reasonPhrase}");
       }
     }
+    List<String> distanceParts = distance.split(' ');
+    if (distance.toLowerCase().contains('km')) {
+      minDistance = (double.parse(distanceParts[0]) * 1000);
+    } else {
+      minDistance = double.parse(distanceParts[0]); // Already in meters
+    }
+    log(minDistance.toString());
     _fitAllMarkers();
   }
 
@@ -892,11 +1028,6 @@ class _StatuspageState extends State<StatusRider> {
     }
 
     await Future.delayed(const Duration(seconds: 4));
-
-    if (mounted) {
-      Navigator.pop(context);
-      Navigator.pop(context);
-    }
   }
 
   void showLoadingDialog(BuildContext context, bool isLoading) {

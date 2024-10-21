@@ -12,6 +12,7 @@ import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:hermes_app/config/config.dart';
+import 'package:hermes_app/models/request/rider_where_id.dart';
 import 'package:hermes_app/models/response/select_user_uid.dart';
 import 'package:hermes_app/models/select_user_all.dart';
 import 'package:hermes_app/pages_user/profile.dart';
@@ -20,17 +21,17 @@ import 'package:image_picker/image_picker.dart';
 import 'package:map_picker/map_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
 
-class EditProfileUserpage extends StatefulWidget {
-  const EditProfileUserpage({super.key});
+class EditProfileRider extends StatefulWidget {
+  const EditProfileRider({super.key});
 
   @override
-  State<EditProfileUserpage> createState() => _EditProfileUserpageState();
+  State<EditProfileRider> createState() => _EditProfileUserState();
 }
 
-class _EditProfileUserpageState extends State<EditProfileUserpage> {
+class _EditProfileUserState extends State<EditProfileRider> {
   String url = "";
   final box = GetStorage();
-  List<SelectUserUid> user = [];
+  List<SelectRiderRid> user = [];
   TextEditingController nameCtl = TextEditingController();
   TextEditingController phoneCtl = TextEditingController();
   TextEditingController addressCtl = TextEditingController();
@@ -85,7 +86,6 @@ class _EditProfileUserpageState extends State<EditProfileUserpage> {
   Widget build(BuildContext context) {
     screenWidth = MediaQuery.of(context).size.width;
     screenHeight = MediaQuery.of(context).size.height;
-
     return Scaffold(
       backgroundColor: Colors.white,
       body: SingleChildScrollView(
@@ -207,7 +207,7 @@ class _EditProfileUserpageState extends State<EditProfileUserpage> {
                                 const SizedBox(height: 15),
                                 const Padding(
                                   padding: EdgeInsets.fromLTRB(20, 0, 20, 5),
-                                  child: Text("ที่อยู่"),
+                                  child: Text("ป้ายทะเบียน"),
                                 ),
                                 SizedBox(
                                   width: screenWidth * 0.8,
@@ -224,7 +224,7 @@ class _EditProfileUserpageState extends State<EditProfileUserpage> {
                                           maxLines: null,
                                           controller: addressCtl,
                                           decoration: const InputDecoration(
-                                            hintText: 'ที่อยู่',
+                                            hintText: 'ป้ายทะเบียน',
                                             hintStyle: TextStyle(
                                                 fontSize: 14,
                                                 color: Color.fromARGB(
@@ -237,84 +237,53 @@ class _EditProfileUserpageState extends State<EditProfileUserpage> {
                                           ),
                                         ),
                                       ),
-                                      Positioned(
-                                        top: 5,
-                                        right: 5,
-                                        child: Container(
-                                          height:
-                                              50, // Set this to match your desired height
-                                          width:
-                                              50, // Set a fixed width for the button
-                                          decoration: BoxDecoration(
-                                              color: const Color(0xFFFF7723),
-                                              borderRadius:
-                                                  BorderRadius.circular(20)),
-                                          child: IconButton(
-                                            icon: const Icon(Icons.search),
-                                            color: Colors.white,
-                                            onPressed:
-                                                addressCtl.text.isNotEmpty
-                                                    ? () {
-                                                        placeSearch();
-                                                      }
-                                                    : null,
-                                          ),
-                                        ),
-                                      ),
                                     ]),
                                   ),
                                 ),
-                                Center(
-                                  child: Padding(
-                                    padding:
-                                        const EdgeInsets.fromLTRB(0, 10, 0, 30),
-                                    child: Text(
-                                      'Latitude: ${currentLocation?.latitude.toStringAsFixed(4) ?? user[0].lat.toStringAsFixed(4) ?? 'ยังไม่ได้เลือก'} Longitude: ${currentLocation?.longitude.toStringAsFixed(4) ?? user[0].lng.toStringAsFixed(4) ?? 'ยังไม่ได้เลือก'}',
-                                      style: const TextStyle(fontSize: 12),
-                                    ),
+                                const SizedBox(height: 10),
+                                const Divider(),
+                                Padding(
+                                  padding:
+                                      const EdgeInsets.fromLTRB(0, 5, 0, 10),
+                                  child: Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceEvenly,
+                                    children: <Widget>[
+                                      FilledButton(
+                                        style: FilledButton.styleFrom(
+                                            backgroundColor:
+                                                const Color(0xFFbfbdbc)),
+                                        onPressed: () {
+                                          Navigator.of(context).pop(false);
+                                        },
+                                        child: const Text(
+                                          "ยกเลิก",
+                                          style: TextStyle(
+                                            fontSize: 18,
+                                            fontWeight: FontWeight.bold,
+                                            color: Color(0xFFFF3131),
+                                          ),
+                                        ),
+                                      ),
+                                      FilledButton(
+                                        style: FilledButton.styleFrom(
+                                            backgroundColor:
+                                                const Color(0xFFFF7723)),
+                                        onPressed: () {
+                                          updateprofile(context);
+                                        },
+                                        child: const Text(
+                                          "ยืนยัน",
+                                          style: TextStyle(
+                                            fontSize: 18,
+                                            fontWeight: FontWeight.bold,
+                                            color: Colors.white,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ),
-
-                                Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    ElevatedButton(
-                                      onPressed: showMapPicker,
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor:
-                                            const Color(0xFFbfbdbc),
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius:
-                                              BorderRadius.circular(30),
-                                        ),
-                                      ),
-                                      child: const Text('เปลี่ยนปักหมุด',
-                                          style: TextStyle(
-                                              fontSize: 13,
-                                              color: Colors.black,
-                                              fontWeight: FontWeight.bold)),
-                                    ),
-                                    ElevatedButton(
-                                      onPressed: () {
-                                        updateprofile(context);
-                                      },
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor:
-                                            const Color(0xFFFF7723),
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius:
-                                              BorderRadius.circular(30),
-                                        ),
-                                      ),
-                                      child: const Text('ยืนยัน',
-                                          style: TextStyle(
-                                              fontSize: 13,
-                                              color: Colors.white,
-                                              fontWeight: FontWeight.bold)),
-                                    ),
-                                  ],
-                                )
                               ],
                             ),
                           ),
@@ -372,20 +341,23 @@ class _EditProfileUserpageState extends State<EditProfileUserpage> {
   }
 
   Future<void> getTUser() async {
+    log(box.read('uid'));
     String? phone = box.read('phone');
     String? uid = box.read('uid');
     var config = await Configuration.getConfig();
     url = config['apiEndPoint'];
 
-    var res = await http.get(Uri.parse('$url/user/$uid'));
+    var res = await http.get(Uri.parse('$url/rider/$uid'));
     log(res.body);
-    final singleUser = selectUserUidFromJson(res.body);
+    user = selectRiderRidFromJson(res.body);
 
-    user = [singleUser];
-    // log(user[0].picture);
+    // log(singleUser[0].toString());
+
+    // user = singleUser;
+    log(user[0].phone.toString());
     nameCtl.text = user[0].name;
     phoneCtl.text = user[0].phone;
-    addressCtl.text = user[0].address;
+    addressCtl.text = user[0].plate;
     pictureUrl = user[0].picture;
     setState(() {});
   }
@@ -394,13 +366,16 @@ class _EditProfileUserpageState extends State<EditProfileUserpage> {
     String? phone = box.read('phone');
     String? uid = box.read('uid');
 
+    // ตรวจสอบว่า user[0].picture มีค่า
     if (user.isNotEmpty && user[0].picture.isNotEmpty) {
-      pictureUrl = user[0].picture;
+      // ถ้ามีค่าให้กำหนดให้ image เป็น user[0].picture
+      pictureUrl = user[0].picture; // ใช้ URL ตรงๆ แทนการแปลงเป็น XFile
     }
 
+    // ตรวจสอบว่า pictureUrl มีค่า
     if (pictureUrl == null) {
       log('Image is null or does not exist. Please select a valid image before updating the profile.');
-      return;
+      return; // ออกจากฟังก์ชันถ้า pictureUrl เป็น null
     }
     String fileName = DateTime.now().millisecondsSinceEpoch.toString();
     Reference ref = FirebaseStorage.instance.ref();
@@ -416,14 +391,13 @@ class _EditProfileUserpageState extends State<EditProfileUserpage> {
       log('Error!');
     }
 
-    log('User picture: $pictureUrl');
+    log('User picture: $pictureUrl'); // แสดง URL ของภาพที่กำหนด
+
+    // จากนี้ไปจะเป็นการอัปเดตข้อมูลโปรไฟล์ตามปกติ
     var json = {
       "phone": phoneCtl.text.isNotEmpty ? phoneCtl.text : '',
       "name": nameCtl.text.isNotEmpty ? nameCtl.text : '',
-      "address": addressCtl.text.isNotEmpty ? addressCtl.text : '',
-      "lat": currentLocation?.latitude ?? 0.0,
-      "lng": currentLocation?.longitude ?? 0.0,
-      "password": user[0].password ?? '',
+      "plate": addressCtl.text.isNotEmpty ? addressCtl.text : '',
       "picture": pictureUrl!, // ใช้ URL ของภาพ
     };
 
@@ -504,20 +478,16 @@ class _EditProfileUserpageState extends State<EditProfileUserpage> {
     if (confirmUpdate) {
       try {
         var response = await http.put(
-          Uri.parse('$url/user/update/$uid'),
+          Uri.parse('$url/rider/update/$uid'),
           headers: {"Content-Type": "application/json; charset=utf-8"},
           body: jsonEncode(json),
         );
 
         if (response.statusCode == 200) {
           log('Profile updated successfully!');
-          // สำหรับการใช้ GetX
-          Get.offAll(Profilepage());
-
-          // หรือสำหรับการใช้ Navigator ทั่วไป
-          // Navigator.of(context).pushReplacement(
-          //   MaterialPageRoute(builder: (context) => Profilepage()),
-          // );
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (context) => const Profilepage()),
+          );
         } else {
           log('Failed to update profile: ${response.body}');
         }
@@ -613,211 +583,6 @@ class _EditProfileUserpageState extends State<EditProfileUserpage> {
                 const SizedBox(height: 10),
               ],
             ),
-          ),
-        );
-      },
-    );
-  }
-
-// ฟังก์ชันสำหรับค้นหาสถานที่
-  Future<void> placeSearch() async {
-    log('Searching for place...');
-    if (addressCtl.text.length > 1) {
-      final String url =
-          'https://maps.googleapis.com/maps/api/place/textsearch/json?query=${addressCtl.text}&language=th&key=${apiKey}';
-      final response = await http.get(Uri.parse(url));
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-
-        if (data['status'] == 'OK') {
-          double latitude = data['results'][0]['geometry']['location']['lat'];
-          double longitude = data['results'][0]['geometry']['location']['lng'];
-
-          initPosition =
-              CameraPosition(target: LatLng(latitude, longitude), zoom: 17);
-          log("Location found: Latitude: $latitude, Longitude: $longitude");
-        } else {
-          log('Place not found.');
-        }
-      } else {
-        log('Error fetching data: ${response.statusCode}');
-      }
-      showMapPicker(); // เรียกฟังก์ชันเพื่อแสดงแผนที่
-      setState(() {});
-    } else {
-      log('Address input is too short.');
-    }
-  }
-
-  Future<void> showMapPicker() async {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return Dialog(
-          insetPadding: EdgeInsets.zero, // Removes any padding
-          child: Stack(
-            children: [
-              SizedBox(
-                width: MediaQuery.of(context).size.width,
-                height: MediaQuery.of(context).size.height,
-                child: MapPicker(
-                  iconWidget: SvgPicture.asset(
-                    'assets/images/location_icon.svg',
-                    height: 60,
-                  ),
-                  mapPickerController: mapPickerController,
-                  child: GoogleMap(
-                    myLocationButtonEnabled: true,
-                    myLocationEnabled: true,
-                    key: UniqueKey(),
-                    trafficEnabled: true,
-                    mapType: MapType.hybrid,
-                    initialCameraPosition: initPosition,
-                    markers: markers, // Pass markers to the GoogleMap
-                    onMapCreated: (GoogleMapController controller) {
-                      _controller.complete(controller);
-                      // Optionally add a marker for the previous location, if desired
-                      if (currentLocation != null) {
-                        markers.add(
-                          Marker(
-                            markerId: const MarkerId('previous_location'),
-                            position: currentLocation!,
-                            infoWindow:
-                                const InfoWindow(title: 'Previous Location'),
-                          ),
-                        );
-                        setState(() {}); // Update the UI to show the marker
-                      }
-                    },
-                    onCameraMove: (cameraPosition) {
-                      setState(() {
-                        this.initPosition = cameraPosition;
-                      });
-                    },
-                    onCameraIdle: () async {
-                      mapPickerController.mapFinishedMoving!();
-                      placemarks = await placemarkFromCoordinates(
-                        initPosition.target.latitude,
-                        initPosition.target.longitude,
-                      );
-                    },
-                  ),
-                ),
-              ),
-              Positioned(
-                bottom: 25,
-                left: 100,
-                right: 100,
-                child: FilledButton(
-                  style: FilledButton.styleFrom(
-                      backgroundColor: const Color(0xFFFF7723)),
-                  onPressed: () async {
-                    if (placemarks.isNotEmpty) {
-                      log('Fetching nearby places...');
-                      final String url =
-                          'https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${initPosition.target.latitude},${initPosition.target.longitude}&radius=40&language=th&type=point_of_interest&key=${apiKey}';
-                      final response = await http.get(Uri.parse(url));
-
-                      if (response.statusCode == 200) {
-                        final Map<String, dynamic> data =
-                            jsonDecode(response.body);
-
-                        if (data['status'] == 'OK' &&
-                            data['results'].isNotEmpty) {
-                          final place = data['results'][0];
-                          final String name = place['name'];
-                          // log('Found place name: $name');
-                          // Fetching the formatted address
-                          final String url =
-                              'https://maps.googleapis.com/maps/api/geocode/json?latlng=${initPosition.target.latitude},${initPosition.target.longitude}&key=$apiKey&language=th';
-                          final response = await http.get(Uri.parse(url));
-                          // log('Geocode response status code: ${response.statusCode}');
-
-                          if (response.statusCode == 200) {
-                            final Map<String, dynamic> data =
-                                jsonDecode(response.body);
-                            if (data['status'] == 'OK' &&
-                                data['results'].isNotEmpty) {
-                              final place = data['results'][0];
-                              final String formattedAddress =
-                                  place['formatted_address'];
-                              log('Name: $name, Formatted Address: $formattedAddress');
-
-                              // Log city name from the formatted address
-                              String cityName = '';
-                              for (var component
-                                  in place['address_components']) {
-                                if (component['types'].contains('locality')) {
-                                  cityName = component['long_name'];
-                                  break;
-                                }
-                              }
-                              // log('City Name: $cityName');
-
-                              List<String> components =
-                                  formattedAddress.trim().split(' ');
-                              List<String> fixComponents =
-                                  components.sublist(0, components.length - 1);
-                              addressCtl.text = name + fixComponents.join(' ');
-                              log(addressCtl.text);
-                            }
-                          }
-                        } else {
-                          log('No point of interest found!');
-                          // Similar handling for geocode request if no places are found
-                          final String url =
-                              'https://maps.googleapis.com/maps/api/geocode/json?latlng=${initPosition.target.latitude},${initPosition.target.longitude}&key=$apiKey&language=th';
-                          final response = await http.get(Uri.parse(url));
-                          log('Geocode response status code: ${response.statusCode}'); // Log geocode response status
-                          if (response.statusCode == 200) {
-                            final Map<String, dynamic> data =
-                                jsonDecode(response.body);
-                            if (data['status'] == 'OK' &&
-                                data['results'].isNotEmpty) {
-                              final place = data['results'][0];
-                              final String formattedAddress =
-                                  place['formatted_address'];
-                              log('Formatted Address: $formattedAddress');
-                              List<String> components =
-                                  formattedAddress.trim().split(' ');
-                              List<String> fixComponents =
-                                  components.sublist(0, components.length - 1);
-                              addressCtl.text = fixComponents.join(' ');
-                              log(addressCtl.text);
-                            }
-                          }
-                        }
-                      }
-                    }
-                    log('lat: ${initPosition.target.latitude} lng: ${initPosition.target.longitude}');
-                    currentLocation = LatLng(initPosition.target.latitude,
-                        initPosition.target.longitude);
-                    // Clear existing markers and add the new one
-                    markers.clear(); // Clear the markers set
-                    markers.add(
-                      // Add the new marker to the set
-                      Marker(
-                        markerId: const MarkerId('current_location'),
-                        position: currentLocation!,
-                        infoWindow: const InfoWindow(title: 'Current Location'),
-                      ),
-                    );
-
-                    setState(() {}); // Update the UI with the new state
-                    Navigator.pop(
-                        context); // Close dialog after selecting location
-                  },
-                  child: const Text(
-                    'ยืนยัน',
-                    style: TextStyle(
-                      fontSize: 20,
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ),
-            ],
           ),
         );
       },
