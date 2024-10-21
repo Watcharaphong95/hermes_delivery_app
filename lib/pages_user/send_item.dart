@@ -421,7 +421,7 @@ class _SendItemState extends State<SendItem> {
       'latSender': sender.lat,
       'lngSender': sender.lng,
       'detail': itemDetails.text,
-      'picture_2': pictureUrl,
+      'picture': pictureUrl,
       'status': 1,
       'riderRid': null,
       'latRider': null,

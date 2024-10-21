@@ -70,119 +70,122 @@ class _AllStatusState extends State<AllStatus> {
         listener.cancel();
       },
       child: Scaffold(
-        body: SingleChildScrollView(
-          child: Stack(
-            children: [
-              Column(
-                children: [
-                  Container(
-                    width: screenWidth,
-                    height: screenHeight * 0.35,
-                    decoration: const BoxDecoration(
-                      color: Color(0xFF2C262A),
-                      borderRadius: BorderRadius.only(
-                        bottomLeft: Radius.circular(18),
-                        bottomRight: Radius.circular(18),
-                      ),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(20, 50, 20, 0),
-                          child: IconButton(
-                            icon: const Icon(
-                              Icons.arrow_back,
-                              color: Colors.white,
-                              size: 30,
-                            ),
-                            onPressed: () {
-                              Navigator.pop(context);
-                            },
-                          ),
-                        ),
-                        Center(
-                          child: Image.asset(
-                            'assets/images/Logo_status.png',
-                            width: screenWidth * 0.7,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              Padding(
-                padding: EdgeInsets.fromLTRB(
-                  screenWidth * 0.045,
-                  screenHeight * 0.28,
-                  screenWidth * 0.045,
-                  0,
-                ),
-                child: Container(
+        body: Stack(
+          children: [
+            Column(
+              children: [
+                Container(
                   width: screenWidth,
-                  height: screenHeight * 0.7,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFE8E8E8),
-                    borderRadius: BorderRadius.circular(18),
+                  height: screenHeight * 0.35,
+                  decoration: const BoxDecoration(
+                    color: Color(0xFF2C262A),
+                    borderRadius: BorderRadius.only(
+                      bottomLeft: Radius.circular(18),
+                      bottomRight: Radius.circular(18),
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(20, 50, 20, 0),
+                        child: IconButton(
+                          icon: const Icon(
+                            Icons.arrow_back,
+                            color: Colors.white,
+                            size: 30,
+                          ),
+                          onPressed: () {
+                            Navigator.pop(context);
+                          },
+                        ),
+                      ),
+                      Center(
+                        child: Image.asset(
+                          'assets/images/Logo_status.png',
+                          width: screenWidth * 0.7,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
+              ],
+            ),
+            Padding(
+              padding: EdgeInsets.fromLTRB(
+                screenWidth * 0.045,
+                screenHeight * 0.28,
+                screenWidth * 0.045,
+                0,
               ),
-              // if (isLoadingMap) const Center(child: CircularProgressIndicator()),
-              Positioned(
-                top: screenHeight * 0.3,
-                left: (screenWidth * 0.5) - (screenWidth * 0.8 / 2),
-                child: SizedBox(
-                  width: screenWidth * 0.8,
-                  height: screenHeight * 0.25,
-                  child: GoogleMap(
-                    mapType: MapType.normal,
-                    initialCameraPosition: initPosition,
-                    myLocationEnabled: false,
-                    markers: _markers,
-                    polylines: _polylines,
-                    onMapCreated: (GoogleMapController controller) {
-                      mapController = controller;
-                      Future.delayed(const Duration(milliseconds: 200), () {
-                        _fitAllMarkers();
-                      });
-                    },
-                    zoomGesturesEnabled: true,
-                    // scrollGesturesEnabled: false,
-                    // zoomControlsEnabled: false,
-                    // myLocationButtonEnabled: false,
-                  ),
+              child: Container(
+                width: screenWidth,
+                height: screenHeight * 0.7,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE8E8E8),
+                  borderRadius: BorderRadius.circular(18),
                 ),
               ),
-              Padding(
-                padding: EdgeInsets.fromLTRB(
-                  screenWidth * 0.07,
-                  screenHeight * 0.57,
-                  screenWidth * 0.1,
-                  0,
-                ),
-                child: const Text("สถานะการจัดส่ง",
-                    style: TextStyle(
-                      fontSize: 17,
-                      fontWeight: FontWeight.bold,
-                    )),
+            ),
+            // if (isLoadingMap) const Center(child: CircularProgressIndicator()),
+            Padding(
+              padding: EdgeInsets.fromLTRB(
+                screenWidth * 0.1,
+                screenHeight * 0.3,
+                screenWidth * 0.1,
+                0,
               ),
-              Positioned(
-                top: screenHeight * 0.3,
-                right: screenWidth * 0.1,
-                child: FloatingActionButton.small(
-                  onPressed: () async {
-                    // Move the map camera to the user's location
-                    mapController.animateCamera(
-                      CameraUpdate.newLatLng(LatLng(
-                          userLocation.latitude, userLocation.longitude)),
-                    );
+              child: SizedBox(
+                width: screenWidth * 0.8,
+                height: screenHeight * 0.25,
+                child: GoogleMap(
+                  mapType: MapType.normal,
+                  initialCameraPosition: initPosition,
+                  myLocationEnabled: false,
+                  markers: _markers,
+                  polylines: _polylines,
+                  onMapCreated: (GoogleMapController controller) {
+                    mapController = controller;
+                    Future.delayed(const Duration(milliseconds: 200), () {
+                      _fitAllMarkers();
+                    });
                   },
-                  child: const Icon(Icons.my_location),
+                  zoomGesturesEnabled: true,
+                  // scrollGesturesEnabled: false,
+                  // zoomControlsEnabled: false,
+                  // myLocationButtonEnabled: false,
                 ),
-              )
-            ],
-          ),
+              ),
+            ),
+            Container(
+              margin: EdgeInsets.fromLTRB(0, screenHeight * 0.56, 0, 0),
+              child: const SingleChildScrollView(
+                child: Column(
+                  children: [
+                    Text("สถานะการจัดส่ง",
+                        style: TextStyle(
+                          fontSize: 17,
+                          fontWeight: FontWeight.bold,
+                        )),
+                  ],
+                ),
+              ),
+            ),
+            Positioned(
+              top: screenHeight * 0.3,
+              right: screenWidth * 0.1,
+              child: FloatingActionButton.small(
+                onPressed: () async {
+                  // Move the map camera to the user's location
+                  mapController.animateCamera(
+                    CameraUpdate.newLatLng(
+                        LatLng(userLocation.latitude, userLocation.longitude)),
+                  );
+                },
+                child: const Icon(Icons.my_location),
+              ),
+            )
+          ],
         ),
       ),
     );

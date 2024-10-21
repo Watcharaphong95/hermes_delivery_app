@@ -36,57 +36,64 @@ class _ProfilepageState extends State<Profilepage> {
     return Scaffold(
       backgroundColor: Colors.white,
       body: SingleChildScrollView(
-        child: user.isEmpty // Check if user list is empty
-            ? const Center(
-                child: CircularProgressIndicator()) // Show loading indicator
-            : Column(
+        child: Column(
+          children: [
+            Container(
+              width: screenWidth,
+              height: screenHeight * 0.2,
+              decoration: const BoxDecoration(
+                color: Color(0xFF2C262A),
+                borderRadius: BorderRadius.only(
+                  bottomLeft: Radius.circular(18),
+                  bottomRight: Radius.circular(18),
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Container(
-                    width: screenWidth,
-                    height: screenHeight * 0.2,
-                    decoration: const BoxDecoration(
-                      color: Color(0xFF2C262A),
-                      borderRadius: BorderRadius.only(
-                        bottomLeft: Radius.circular(18),
-                        bottomRight: Radius.circular(18),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 50, 20, 0),
+                    child: IconButton(
+                      icon: const Icon(
+                        Icons.arrow_back,
+                        color: Colors.white,
+                        size: 30,
                       ),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(20, 50, 20, 0),
-                          child: IconButton(
-                            icon: const Icon(
-                              Icons.arrow_back,
-                              color: Colors.white,
-                              size: 30,
-                            ),
-                            onPressed: () {
-                              Navigator.pop(context);
-                            },
-                          ),
-                        ),
-                        const Padding(
-                          padding: EdgeInsets.fromLTRB(0, 2, 0, 10),
-                          child: Center(
-                              child: Text(
-                            "โปรไฟล์",
-                            style: TextStyle(
-                              fontSize: 35,
-                              fontWeight: FontWeight.bold,
-                              color: Color.fromARGB(255, 255, 255, 255),
-                            ),
-                          )),
-                        ),
-                      ],
+                      onPressed: () {
+                        Navigator.pop(context);
+                      },
                     ),
                   ),
-                  SizedBox(
-                    height: screenHeight * 0.04,
+                  const Padding(
+                    padding: EdgeInsets.fromLTRB(0, 2, 0, 10),
+                    child: Center(
+                        child: Text(
+                      "โปรไฟล์",
+                      style: TextStyle(
+                        fontSize: 35,
+                        fontWeight: FontWeight.bold,
+                        color: Color.fromARGB(255, 255, 255, 255),
+                      ),
+                    )),
                   ),
-                  Stack(
-                    children: [
+                ],
+              ),
+            ),
+            SizedBox(
+              height: screenHeight * 0.04,
+            ),
+            Stack(
+              children: user.isEmpty
+                  ? [
+                      Padding(
+                        padding:
+                            EdgeInsets.symmetric(vertical: screenHeight * 0.3),
+                        child: const Center(
+                            child:
+                                CircularProgressIndicator()), // Show loading indicator
+                      ),
+                    ] // Wrap in a List
+                  : [
                       Padding(
                         padding: const EdgeInsets.only(top: 80),
                         child: Container(
@@ -304,12 +311,12 @@ class _ProfilepageState extends State<Profilepage> {
                               ),
                       ),
                     ],
-                  ),
-                  SizedBox(
-                    height: screenHeight * 0.09,
-                  )
-                ],
-              ),
+            ),
+            SizedBox(
+              height: screenHeight * 0.09,
+            )
+          ],
+        ),
       ),
     );
   }

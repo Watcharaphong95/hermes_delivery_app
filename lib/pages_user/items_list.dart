@@ -370,8 +370,7 @@ class _ListpageState extends State<ItemsList> {
                       if (!isReceived &&
                           ordersSend.isNotEmpty &&
                           ordersSend.any((order) =>
-                              order.status != 4.toString() &&
-                              order.status != 5.toString()))
+                              order.status != '4' && order.status != '5'))
                         Padding(
                           padding: const EdgeInsets.symmetric(vertical: 20.0),
                           child: ElevatedButton(
