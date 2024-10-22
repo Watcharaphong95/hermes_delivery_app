@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:hermes_app/config/config.dart';
 import 'package:hermes_app/models/response/order_firebase_res.dart';
 import 'package:hermes_app/models/response/phone_user.dart';
@@ -43,11 +44,25 @@ class _SendItemState extends State<SendItem> {
 
   int uidReceiver = 0;
 
+  bool isLoadingMap = true;
+  late GoogleMapController mapController;
+  Set<Marker> _markers = {};
+  final Set<Polyline> _polylines = {};
+  CameraPosition initPosition = const CameraPosition(
+    target: LatLng(16.246671218679253, 103.25207957788868),
+    zoom: 10,
+  );
+
   @override
   void initState() {
     super.initState();
     callApiEndPoint();
     uidReceiver = widget.uid;
+    initPosition = const CameraPosition(
+      target: LatLng(0, 0), // Default location
+      zoom: 10,
+    );
+    callApiEndPoint();
   }
 
   TextEditingController itemDetails = TextEditingController();
@@ -135,6 +150,25 @@ class _SendItemState extends State<SendItem> {
                                   ),
                           ],
                         ),
+                      ),
+                    ),
+                    const SizedBox(
+                      height: 20,
+                    ),
+                    SizedBox(
+                      width: screenWidth * 0.9,
+                      height: screenHeight * 0.25,
+                      child: GoogleMap(
+                        mapType: MapType.normal,
+                        initialCameraPosition: initPosition,
+                        markers: _markers,
+                        polylines: _polylines,
+                        onMapCreated: (GoogleMapController controller) {
+                          mapController = controller;
+                        },
+                        zoomGesturesEnabled: true,
+                        scrollGesturesEnabled: true,
+                        zoomControlsEnabled: true,
                       ),
                     ),
                     const Padding(
@@ -296,11 +330,28 @@ class _SendItemState extends State<SendItem> {
     await Configuration.getConfig().then((config) {
       url = config['apiEndPoint'];
     });
-    log(url);
+
     var res = await http.get(Uri.parse('$url/user/$uidReceiver'));
     receiverData = phoneSearchResFromJson(res.body);
-    log(receiverData[0].address);
-    setState(() {});
+
+    if (receiverData.isNotEmpty) {
+      LatLng targetLocation = LatLng(receiverData[0].lat, receiverData[0].lng);
+      _moveCamera(targetLocation);
+      _addMarker(targetLocation, 'Delivery Location'); // Add marker
+      setState(() {}); // Refresh the UI
+    }
+  }
+
+  void _addMarker(LatLng position, String title) {
+    print('Adding marker at $position'); // Debugging statement
+    _markers.add(
+      Marker(
+        markerId: MarkerId(title),
+        position: position,
+        infoWindow: InfoWindow(title: title),
+      ),
+    );
+    setState(() {}); // Ensure UI refresh
   }
 
   Future<void> addProfileImage() async {
@@ -483,7 +534,7 @@ class _SendItemState extends State<SendItem> {
                           },
                           style: ButtonStyle(
                             backgroundColor: MaterialStateProperty.all(
-                                Color(0xFFFF7723)), // สีพื้นหลัง
+                                const Color(0xFFFF7723)), // สีพื้นหลัง
                           ),
                           child: const Text(
                             'ตกลง',
@@ -567,5 +618,14 @@ class _SendItemState extends State<SendItem> {
         );
       },
     );
+  }
+
+  void _moveCamera(LatLng targetLocation) {
+    mapController.animateCamera(CameraUpdate.newCameraPosition(
+      CameraPosition(
+        target: targetLocation,
+        zoom: 14,
+      ),
+    ));
   }
 }
