@@ -7,6 +7,7 @@ import 'package:hermes_app/config/config.dart';
 import 'package:hermes_app/models/request/rider_where_id.dart';
 import 'package:hermes_app/pages_rider/edit_profile_rider.dart';
 import 'package:hermes_app/pages_rider/home_rider.dart';
+import 'package:hermes_app/pages_user/login.dart';
 import 'package:http/http.dart' as http;
 
 class ProfileRider extends StatefulWidget {
@@ -21,6 +22,9 @@ class _ProfileRiderState extends State<ProfileRider> {
   List<SelectRiderRid> user = [];
   final box = GetStorage();
 
+  double screenWidth = 0;
+  double screenHeight = 0;
+
   @override
   void initState() {
     // TODO: implement initState
@@ -29,8 +33,8 @@ class _ProfileRiderState extends State<ProfileRider> {
 
   @override
   Widget build(BuildContext context) {
-    double screenWidth = MediaQuery.of(context).size.width;
-    double screenHeight = MediaQuery.of(context).size.height;
+    screenWidth = MediaQuery.of(context).size.width;
+    screenHeight = MediaQuery.of(context).size.height;
     return Scaffold(
       appBar: null,
       body: SingleChildScrollView(
@@ -213,7 +217,7 @@ class _ProfileRiderState extends State<ProfileRider> {
                                   padding: const EdgeInsets.only(left: 8.0),
                                   child: ElevatedButton(
                                     onPressed: () {
-                                      // dialog();
+                                      dialog();
                                     },
                                     style: ElevatedButton.styleFrom(
                                       backgroundColor: const Color(0xFFbfbdbc),
@@ -309,5 +313,100 @@ class _ProfileRiderState extends State<ProfileRider> {
     // user = singleUser;
     log(user[0].phone.toString());
     setState(() {});
+  }
+
+  Future<void> dialog() async {
+    // แสดงกล่องยืนยัน
+    bool confirmUpdate = await showDialog<bool>(
+          context: context,
+          builder: (BuildContext context) {
+            return Dialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20), // รูปแบบมุม
+              ),
+              child: Container(
+                width: screenWidth, // ปรับความกว้าง
+                padding: const EdgeInsets.all(0), // เว้นพื้นที่รอบ
+                child: Column(
+                  mainAxisSize:
+                      MainAxisSize.min, // ขนาดของคอลัมน์จะใช้พื้นที่ที่จำเป็น
+                  children: <Widget>[
+                    const Padding(
+                      padding: EdgeInsets.fromLTRB(0, 20, 10, 10),
+                      child: Center(
+                          child: Text(
+                        "ยืนยันการออกจากระบบ",
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      )),
+                    ),
+                    const Divider(),
+                    const SizedBox(height: 15),
+                    const Padding(
+                      padding: EdgeInsets.all(5),
+                      child: Text("คุณต้องการออกจากระบบหรือไม่?"),
+                    ),
+                    const SizedBox(height: 15),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(0, 5, 0, 10),
+                      child: Row(
+                        mainAxisAlignment:
+                            MainAxisAlignment.spaceEvenly, // จัดเรียงปุ่ม
+                        children: <Widget>[
+                          FilledButton(
+                            onPressed: () {
+                              Navigator.of(context).pop(false);
+                            },
+                            style: FilledButton.styleFrom(
+                              backgroundColor: Colors
+                                  .grey, // เปลี่ยนเป็นสีที่ต้องการ เช่น สีเทาสำหรับปุ่ม "ยกเลิก"
+                              textStyle: const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            child: const Text(
+                              "ยกเลิก",
+                              style: TextStyle(
+                                color: Colors
+                                    .white, // สีข้อความให้ชัดเจนกับสีพื้นหลัง
+                              ),
+                            ),
+                          ),
+                          FilledButton(
+                            onPressed: () {
+                              box.remove('rememberMe');
+                              box.remove('savedPhone');
+                              box.remove('savedPassword');
+                              Get.to(() => const LoginPage());
+                            },
+                            style: FilledButton.styleFrom(
+                              backgroundColor: const Color(
+                                  0xFFFF7723), // เปลี่ยนสีพื้นหลังตามที่ต้องการ
+                              textStyle: const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            child: const Text(
+                              "ยืนยัน",
+                              style: TextStyle(
+                                color:
+                                    Colors.white, // สีตัวอักษรที่มองเห็นชัดเจน
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        ) ??
+        false;
   }
 }

@@ -1016,7 +1016,7 @@ class _StatuspageState extends State<StatusRider> {
     if (_activeButtonIndex == 3) {
       data = {'picture_2': pictureUrl, 'status': 3};
     } else if (_activeButtonIndex == 4) {
-      data = {'picture_3': pictureUrl, 'status': 4};
+      data = {'picture_3': pictureUrl, 'status': 4, 'endAt': DateTime.now()};
     }
 
     await db.collection('order').doc(widget.docId).update(data);
