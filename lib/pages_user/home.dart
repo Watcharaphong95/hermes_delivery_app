@@ -1,14 +1,18 @@
+import 'dart:convert';
 import 'dart:developer';
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:hermes_app/config/config.dart';
+import 'package:hermes_app/models/response/phone_user.dart';
 import 'package:hermes_app/models/response/user_search_res.dart';
 import 'package:hermes_app/pages_user/send_item.dart';
 import 'package:http/http.dart' as http;
 
 class Homepage extends StatefulWidget {
-  const Homepage({super.key});
+  const Homepage({
+    super.key,
+  });
 
   @override
   State<Homepage> createState() => _HomepageState();
@@ -21,10 +25,24 @@ class _HomepageState extends State<Homepage> {
 
   TextEditingController phoneSearch = TextEditingController();
 
+  List<SelectPhoneUser> selectPhoneUserFromJson(String str) {
+    final jsonData = json.decode(str);
+
+    if (jsonData is List) {
+      return List<SelectPhoneUser>.from(
+          jsonData.map((item) => SelectPhoneUser.fromJson(item)));
+    } else {
+      throw Exception('Expected a list of users, got: ${jsonData.runtimeType}');
+    }
+  }
+
+  List<SelectPhoneUser> singleUser = [];
+
   @override
   void initState() {
     super.initState();
     callApiEndPoint();
+    getTUser();
   }
 
   Widget build(BuildContext context) {
@@ -33,10 +51,9 @@ class _HomepageState extends State<Homepage> {
     double screenHeight = MediaQuery.of(context).size.height;
 
     return Scaffold(
-      backgroundColor: Colors.white,
-      body: SingleChildScrollView(
-        child: Column(
-          children: [
+        backgroundColor: Colors.white,
+        body: SingleChildScrollView(
+          child: Column(children: [
             Container(
               width: screenWidth,
               height: screenHeight * 0.16,
@@ -119,95 +136,160 @@ class _HomepageState extends State<Homepage> {
               width: screenWidth * 0.9,
               child: Column(
                 children: [
-                  // Check if phoneGetResponse is not null and has items
-                  if (phoneGetResponse.isNotEmpty)
-                    Expanded(
-                      child: ListView(
-                        children: phoneGetResponse
-                            .map((searchResult) => InkWell(
-                                  onTap: () {
-                                    Get.to(
-                                        () => SendItem(uid: searchResult.uid));
-                                  },
-                                  child: Card(
-                                    color: const Color(0xFFE8E8E8),
-                                    child: Row(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        const SizedBox(
-                                          width: 20,
-                                        ),
-                                        Container(
-                                          width: screenWidth * 0.15,
-                                          height: screenHeight * 0.1,
-                                          decoration: BoxDecoration(
-                                              shape: BoxShape.circle,
-                                              image: DecorationImage(
-                                                  image: NetworkImage(
-                                                      searchResult.picture),
-                                                  fit: BoxFit.cover)),
-                                        ),
-                                        const SizedBox(
-                                          width: 15,
-                                        ),
-                                        SizedBox(
-                                          height: screenHeight * 0.09,
-                                          child: Column(
-                                            mainAxisAlignment:
-                                                MainAxisAlignment.center,
+                  SizedBox(
+                    height: screenHeight,
+                    width: screenWidth * 0.9,
+                    child: Column(
+                      children: [
+                        // Check if phoneGetResponse is not null and has items
+                        if (phoneGetResponse.isNotEmpty)
+                          Expanded(
+                            child: ListView(
+                              children: phoneGetResponse
+                                  .map((searchResult) => InkWell(
+                                        onTap: () {
+                                          Get.to(() =>
+                                              SendItem(uid: searchResult.uid));
+                                        },
+                                        child: Card(
+                                          color: const Color(0xFFE8E8E8),
+                                          child: Row(
                                             crossAxisAlignment:
                                                 CrossAxisAlignment.start,
                                             children: [
-                                              Text(
-                                                searchResult.phone,
-                                                style: const TextStyle(
-                                                    fontSize: 24,
-                                                    fontWeight:
-                                                        FontWeight.bold),
+                                              const SizedBox(width: 20),
+                                              Container(
+                                                width: screenWidth * 0.15,
+                                                height: screenHeight * 0.1,
+                                                decoration: BoxDecoration(
+                                                    shape: BoxShape.circle,
+                                                    image: DecorationImage(
+                                                        image: NetworkImage(
+                                                            searchResult
+                                                                .picture),
+                                                        fit: BoxFit.cover)),
                                               ),
-                                              Text(
-                                                searchResult.name,
-                                                style: const TextStyle(
-                                                    fontSize: 16),
-                                              ),
+                                              const SizedBox(width: 15),
+                                              SizedBox(
+                                                height: screenHeight * 0.09,
+                                                child: Column(
+                                                  mainAxisAlignment:
+                                                      MainAxisAlignment.center,
+                                                  crossAxisAlignment:
+                                                      CrossAxisAlignment.start,
+                                                  children: [
+                                                    Text(
+                                                      searchResult.phone,
+                                                      style: const TextStyle(
+                                                          fontSize: 24,
+                                                          fontWeight:
+                                                              FontWeight.bold),
+                                                    ),
+                                                    Text(
+                                                      searchResult.name,
+                                                      style: const TextStyle(
+                                                          fontSize: 16),
+                                                    ),
+                                                  ],
+                                                ),
+                                              )
                                             ],
                                           ),
-                                        )
-                                      ],
-                                    ),
-                                  ),
-                                ))
-                            .toList(),
-                      ),
-                    )
-                  else
-                    const SizedBox(
-                      height: 20, // Adjust space as needed
+                                        ),
+                                      ))
+                                  .toList(),
+                            ),
+                          )
+                        else if (singleUser
+                            .isNotEmpty) // Check if singleUser is not empty
+                          Expanded(
+                            child: ListView(
+                              children: singleUser
+                                  .map((user) => InkWell(
+                                        onTap: () {
+                                          Get.to(() => SendItem(uid: user.uid));
+                                        },
+                                        child: Card(
+                                          color: const Color(0xFFE8E8E8),
+                                          child: Row(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              const SizedBox(width: 20),
+                                              Container(
+                                                width: screenWidth * 0.15,
+                                                height: screenHeight * 0.1,
+                                                decoration: BoxDecoration(
+                                                    shape: BoxShape.circle,
+                                                    image: DecorationImage(
+                                                        image: NetworkImage(
+                                                            user.picture),
+                                                        fit: BoxFit.cover)),
+                                              ),
+                                              const SizedBox(width: 15),
+                                              SizedBox(
+                                                height: screenHeight * 0.09,
+                                                child: Column(
+                                                  mainAxisAlignment:
+                                                      MainAxisAlignment.center,
+                                                  crossAxisAlignment:
+                                                      CrossAxisAlignment.start,
+                                                  children: [
+                                                    Text(
+                                                      user.phone,
+                                                      style: const TextStyle(
+                                                          fontSize: 24,
+                                                          fontWeight:
+                                                              FontWeight.bold),
+                                                    ),
+                                                    Text(
+                                                      user.name,
+                                                      style: const TextStyle(
+                                                          fontSize: 16),
+                                                    ),
+                                                  ],
+                                                ),
+                                              )
+                                            ],
+                                          ),
+                                        ),
+                                      ))
+                                  .toList(),
+                            ),
+                          )
+                        else
+                          const Center(
+                              child: Text(
+                                  'ไม่พบข้อมูลผู้ใช้')) // Message when no users found
+                      ],
                     ),
-                  const Text(
-                    "กรุณาค้นหาเบอร์",
-                    style: TextStyle(
-                      fontSize: 30,
-                      color: Color(0xFFBFBDBC),
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const Text(
-                    "ผู้รับสินค้า",
-                    style: TextStyle(
-                      fontSize: 30,
-                      color: Color(0xFFBFBDBC),
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
+                  )
                 ],
               ),
-            )
-          ],
-        ),
-      ),
-    );
+            ),
+          ]),
+        ));
+  }
+
+  Future<void> getTUser() async {
+    var config = await Configuration.getConfig();
+    url = config['apiEndPoint'];
+    var res = await http.get(Uri.parse('$url/user/'));
+
+    if (res.statusCode == 200) {
+      try {
+        // Ensure that we are parsing the correct response
+        singleUser = selectPhoneUserFromJson(res.body);
+        for (var user in singleUser) {
+          log('User Phone: ${user.phone}');
+        }
+        setState(() {}); // Update the UI
+      } catch (e) {
+        log('Error parsing user data: $e');
+      }
+    } else {
+      log('Failed to load users: ${res.statusCode}');
+    }
   }
 
   Future<void> callApiEndPoint() async {

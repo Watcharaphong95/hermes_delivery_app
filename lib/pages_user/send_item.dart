@@ -9,6 +9,7 @@ import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:hermes_app/config/config.dart';
 import 'package:hermes_app/models/response/order_firebase_res.dart';
+import 'package:hermes_app/models/response/phone_user.dart';
 import 'package:hermes_app/models/response/select_user_uid.dart';
 import 'package:hermes_app/models/response/user_search_res.dart';
 import 'package:image_picker/image_picker.dart';

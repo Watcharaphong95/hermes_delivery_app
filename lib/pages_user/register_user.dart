@@ -5,6 +5,7 @@ import 'dart:developer';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
@@ -169,13 +170,24 @@ class _RegisterUserpageState extends State<RegisterUserpage> {
                       ),
                       child: TextField(
                         controller: phoneCtl,
+                        keyboardType: TextInputType.number,
+                        inputFormatters: [
+                          FilteringTextInputFormatter
+                              .digitsOnly, // Allows only digits
+                          LengthLimitingTextInputFormatter(
+                              10), // Limits the input to 10 characters
+                        ],
                         decoration: const InputDecoration(
                           hintText: 'หมายเลขโทรศัพท์',
                           hintStyle: TextStyle(
-                              fontSize: 14, color: Color.fromARGB(97, 0, 0, 0)),
+                            fontSize: 14,
+                            color: Color.fromARGB(97, 0, 0, 0),
+                          ),
                           border: InputBorder.none,
                           contentPadding: EdgeInsets.symmetric(
-                              vertical: 15, horizontal: 35),
+                            vertical: 15,
+                            horizontal: 35,
+                          ),
                         ),
                       ),
                     ),
@@ -377,62 +389,277 @@ class _RegisterUserpageState extends State<RegisterUserpage> {
 /////////////////////////////////////////////////////////////////////////////////////////
 
   void createAccount() async {
-    log(image!.path);
-    if (image == null) return;
-    String fileName = DateTime.now().millisecondsSinceEpoch.toString();
-    Reference ref = FirebaseStorage.instance.ref();
-    Reference refUserProfile = ref.child('profile');
-    Reference imageToUpload = refUserProfile.child(fileName);
-
-    try {
-      await imageToUpload.putFile(File(image!.path));
-      log('test');
-      pictureUrl = await imageToUpload.getDownloadURL();
-      log(pictureUrl);
-    } catch (e) {
-      log('Error!');
+    if (image == null) {
+      showErrorDialog('กรุณาอัพโหลดรูปภาพ'); // "Please upload a picture"
+      return;
     }
 
-    var config = await Configuration.getConfig();
-    url = config['apiEndPoint'];
-    if (phoneCtl.text.isEmpty ||
-        nameCtl.text.isEmpty ||
-        passwordCtl.text.isEmpty ||
-        confirmpasswordCtl.text.isEmpty ||
-        addressCtl.text.isEmpty ||
-        pictureUrl.isEmpty) {}
-    if (phoneCtl.text.length == 10) {
-      if (passwordCtl.text == confirmpasswordCtl.text) {
-        UserRegisterReq userRegisterReq = UserRegisterReq(
-            phone: phoneCtl.text,
-            name: nameCtl.text,
-            password: passwordCtl.text,
-            address: addressCtl.text,
-            lat: currentLocation?.latitude ??
-                0.0, // ใช้ 0.0 หาก latitude เป็น null
-            lng: currentLocation?.longitude ??
-                0.0, // ใช้ 0.0 หาก longitude เป็น null
-            picture: pictureUrl!);
-        try {
-          final response = await http.post(
-            Uri.parse("$url/user/register"),
-            headers: {"Content-Type": "application/json; charset=utf-8"},
-            body: json.encode(
-                userRegisterReq.toJson()), // แปลงเป็น JSON String ที่นี่
-          );
+    if (phoneCtl.text.isEmpty) {
+      showErrorDialog(
+          'กรุณากรอกหมายเลขโทรศัพท์'); // "Please enter your phone number"
+      return;
+    }
 
-          log('Registration response: ${response.body}');
-        } catch (error) {
-          log('Error during registration: $error');
-        }
-      } else {
-        log('Passwords do not match');
-      }
-    } else {
-      log('Phone number must be 10 digits');
+    if (nameCtl.text.isEmpty) {
+      showErrorDialog('กรุณากรอกชื่อ'); // "Please enter your name"
+      return;
+    }
+
+    if (passwordCtl.text.isEmpty) {
+      showErrorDialog('กรุณากรอกรหัสผ่าน'); // "Please enter your password"
+      return;
+    }
+
+    if (confirmpasswordCtl.text.isEmpty) {
+      showErrorDialog(
+          'กรุณากรอกรหัสผ่านอีกครั้ง'); // "Please confirm your password"
+      return;
+    }
+
+    if (addressCtl.text.isEmpty) {
+      showErrorDialog('กรุณากรอกที่อยู่'); // "Please enter your address"
+      return;
+    }
+
+    if (passwordCtl.text != confirmpasswordCtl.text) {
+      showErrorDialog('รหัสผ่านไม่ตรงกัน'); // "Passwords do not match"
+      return;
+    }
+
+    if (phoneCtl.text.length != 10) {
+      showErrorDialog(
+          'หมายเลขโทรศัพท์ต้องมี 10 หลัก'); // "Phone number must be 10 digits"
+      return;
+    }
+
+    // ถ้าข้อมูลครบถ้วน สามารถดำเนินการอัพโหลดและบันทึกข้อมูลต่อไปได้
+    try {
+      String fileName = DateTime.now().millisecondsSinceEpoch.toString();
+      Reference ref = FirebaseStorage.instance.ref();
+      Reference refUserProfile = ref.child('profile');
+      Reference imageToUpload = refUserProfile.child(fileName);
+
+      await imageToUpload.putFile(File(image!.path));
+      pictureUrl = await imageToUpload.getDownloadURL();
+
+      var config = await Configuration.getConfig();
+      url = config['apiEndPoint'];
+
+      UserRegisterReq userRegisterReq = UserRegisterReq(
+        phone: phoneCtl.text,
+        name: nameCtl.text,
+        password: passwordCtl.text,
+        address: addressCtl.text,
+        lat: currentLocation?.latitude ?? 0.0,
+        lng: currentLocation?.longitude ?? 0.0,
+        picture: pictureUrl!,
+      );
+
+      showLoadingDialog(context, true);
+
+      final response = await http.post(
+        Uri.parse("$url/user/register"),
+        headers: {"Content-Type": "application/json; charset=utf-8"},
+        body: json.encode(userRegisterReq.toJson()),
+      );
+
+      log('Registration response: ${response.body}');
+      Navigator.of(context).pop();
+      showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return Dialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Container(
+              width: MediaQuery.of(context).size.width * 0.8,
+              padding: const EdgeInsets.all(0),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  const Padding(
+                    padding: EdgeInsets.fromLTRB(0, 25, 10, 10),
+                    child: Center(
+                      child: Text(
+                        "สมัครสมาชิกสำเร็จ!", // "Success"
+                        style: TextStyle(
+                          fontSize: 23,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const Divider(),
+                  const SizedBox(height: 10),
+                  const Padding(
+                    padding: EdgeInsets.all(10),
+                    child: Text(
+                      "ยินดีตอนรับสู่ระบบขนส่ง HERMES ครับ", // "Item sent successfully"
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 15,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  // const Divider(),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(0, 5, 0, 10),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: <Widget>[
+                        SizedBox(
+                          width: screenWidth * 0.6,
+                          height: screenHeight * 0.06,
+                          child: FilledButton(
+                            onPressed: () {
+                              Navigator.pop(context);
+                              Navigator.pop(context);
+                              Navigator.pop(context);
+                            },
+                            style: ButtonStyle(
+                              backgroundColor: MaterialStateProperty.all(
+                                  Color(0xFFFF7723)), // สีพื้นหลัง
+                            ),
+                            child: const Text(
+                              'ตกลง',
+                              style: TextStyle(
+                                fontSize: 20,
+                                color: Colors
+                                    .white, // เปลี่ยนสีข้อความให้เหมาะสมกับพื้นหลัง
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      );
+    } catch (error) {
+      log('Error during registration: $error');
+      showErrorDialog(
+          'เกิดข้อผิดพลาดระหว่างการลงทะเบียน'); // "Error during registration"
     }
   }
 
+  void showLoadingDialog(BuildContext context, bool isLoading) {
+    if (!isLoading) return;
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return const Center(
+          child: AlertDialog(
+            backgroundColor: Colors.transparent,
+            content: Padding(
+              padding: EdgeInsets.symmetric(vertical: 20),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  SizedBox(
+                    height: 100,
+                    width: 100,
+                    child: CircularProgressIndicator(
+                      color: Colors.orange,
+                      strokeWidth: 10,
+                    ),
+                  ),
+                  SizedBox(height: 20), // Space between the indicator and text
+                  Text(
+                    "กำลังโหลด...",
+                    style: TextStyle(color: Colors.white),
+                  ), // Optional loading text
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void showErrorDialog(String message) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Container(
+            width: MediaQuery.of(context).size.width * 0.8,
+            padding: const EdgeInsets.all(0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                const Padding(
+                  padding: EdgeInsets.fromLTRB(0, 25, 10, 10),
+                  child: Center(
+                    child: Text(
+                      "เกิดข้อผิดพลาด!", // "Error"
+                      style: TextStyle(
+                        fontSize: 23,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+                const Divider(),
+                const SizedBox(height: 10),
+                Padding(
+                  padding: const EdgeInsets.all(10),
+                  child: Text(
+                    message, // แสดงข้อความข้อผิดพลาด
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontSize: 15,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(0, 5, 0, 10),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: <Widget>[
+                      SizedBox(
+                        width: MediaQuery.of(context).size.width * 0.6,
+                        height: MediaQuery.of(context).size.height * 0.06,
+                        child: FilledButton(
+                          onPressed: () {
+                            Navigator.pop(context);
+                          },
+                          style: ButtonStyle(
+                            backgroundColor: MaterialStateProperty.all(
+                                Color(0xFFFF7723)), // สีพื้นหลัง
+                          ),
+                          child: const Text(
+                            'ตกลง',
+                            style: TextStyle(
+                              fontSize: 20,
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
   // void addProfileImage() {
   //   showDialog(
   //     context: context,
