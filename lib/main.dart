@@ -9,11 +9,13 @@ import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:hermes_app/config/share.dart';
 import 'package:hermes_app/firebase_options.dart';
 import 'package:hermes_app/pages_user/login.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:intl/intl.dart'; // For date formatting
-import 'package:intl/intl.dart' as intl; // Use this to initialize locale
+import 'package:intl/intl.dart' as intl;
+import 'package:provider/provider.dart'; // Use this to initialize locale
 
 main() async {
   WidgetsFlutterBinding
@@ -30,7 +32,11 @@ main() async {
 
   await permissionReq(box);
 
-  runApp(const MyApp());
+  runApp(MultiProvider(providers: [
+    ChangeNotifierProvider(
+      create: (context) => AppData(),
+    )
+  ], child: const MyApp()));
 }
 
 Future<void> permissionReq(GetStorage box) async {

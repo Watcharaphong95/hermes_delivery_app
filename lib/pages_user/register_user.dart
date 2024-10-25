@@ -53,6 +53,8 @@ class _RegisterUserpageState extends State<RegisterUserpage> {
   TextEditingController confirmpasswordCtl = TextEditingController();
   TextEditingController addressCtl = TextEditingController();
   String pictureUrl = "";
+  final RxBool isPasswordVisible = true.obs;
+  final RxBool isPasswordVisible1 = true.obs;
 
   final ImagePicker picker = ImagePicker();
   XFile? image;
@@ -228,15 +230,25 @@ class _RegisterUserpageState extends State<RegisterUserpage> {
                         borderRadius: BorderRadius.circular(30),
                       ),
                       child: TextField(
+                        obscureText: isPasswordVisible.value,
                         controller: passwordCtl,
-                        decoration: const InputDecoration(
-                          hintText: 'รหัสผ่าน',
-                          hintStyle: TextStyle(
-                              fontSize: 14, color: Color.fromARGB(97, 0, 0, 0)),
-                          border: InputBorder.none,
-                          contentPadding: EdgeInsets.symmetric(
-                              vertical: 15, horizontal: 35),
-                        ),
+                        decoration: InputDecoration(
+                            hintText: 'รหัสผ่าน',
+                            hintStyle: const TextStyle(
+                                fontSize: 14,
+                                color: Color.fromARGB(97, 0, 0, 0)),
+                            border: InputBorder.none,
+                            contentPadding: const EdgeInsets.symmetric(
+                                vertical: 15, horizontal: 35),
+                            suffixIcon: IconButton(
+                                onPressed: () {
+                                  isPasswordVisible.value =
+                                      !isPasswordVisible.value;
+                                  setState(() {});
+                                },
+                                icon: Icon(isPasswordVisible.value
+                                    ? Icons.visibility_off
+                                    : Icons.visibility))),
                       ),
                     ),
                   ),
@@ -252,15 +264,25 @@ class _RegisterUserpageState extends State<RegisterUserpage> {
                         borderRadius: BorderRadius.circular(30),
                       ),
                       child: TextField(
+                        obscureText: isPasswordVisible1.value,
                         controller: confirmpasswordCtl,
-                        decoration: const InputDecoration(
-                          hintText: 'ยืนยันรหัสผ่าน',
-                          hintStyle: TextStyle(
-                              fontSize: 14, color: Color.fromARGB(97, 0, 0, 0)),
-                          border: InputBorder.none,
-                          contentPadding: EdgeInsets.symmetric(
-                              vertical: 15, horizontal: 35),
-                        ),
+                        decoration: InputDecoration(
+                            hintText: 'ยืนยันรหัสผ่าน',
+                            hintStyle: const TextStyle(
+                                fontSize: 14,
+                                color: Color.fromARGB(97, 0, 0, 0)),
+                            border: InputBorder.none,
+                            contentPadding: const EdgeInsets.symmetric(
+                                vertical: 15, horizontal: 35),
+                            suffixIcon: IconButton(
+                                onPressed: () {
+                                  isPasswordVisible1.value =
+                                      !isPasswordVisible1.value;
+                                  setState(() {});
+                                },
+                                icon: Icon(isPasswordVisible1.value
+                                    ? Icons.visibility_off
+                                    : Icons.visibility))),
                       ),
                     ),
                   ),
@@ -394,29 +416,33 @@ class _RegisterUserpageState extends State<RegisterUserpage> {
       return;
     }
 
-    if (phoneCtl.text.isEmpty) {
+    if (phoneCtl.text.isEmpty ||
+        RegExp(r'^\s+$').hasMatch(phoneCtl.text) ||
+        !RegExp(r'^\d+$').hasMatch(phoneCtl.text)) {
       showErrorDialog(
           'กรุณากรอกหมายเลขโทรศัพท์'); // "Please enter your phone number"
       return;
     }
 
-    if (nameCtl.text.isEmpty) {
+    if (nameCtl.text.isEmpty || RegExp(r'^\s+$').hasMatch(nameCtl.text)) {
       showErrorDialog('กรุณากรอกชื่อ'); // "Please enter your name"
       return;
     }
 
-    if (passwordCtl.text.isEmpty) {
+    if (passwordCtl.text.isEmpty ||
+        RegExp(r'^\s+$').hasMatch(passwordCtl.text)) {
       showErrorDialog('กรุณากรอกรหัสผ่าน'); // "Please enter your password"
       return;
     }
 
-    if (confirmpasswordCtl.text.isEmpty) {
+    if (confirmpasswordCtl.text.isEmpty ||
+        RegExp(r'^\s+$').hasMatch(confirmpasswordCtl.text)) {
       showErrorDialog(
           'กรุณากรอกรหัสผ่านอีกครั้ง'); // "Please confirm your password"
       return;
     }
 
-    if (addressCtl.text.isEmpty) {
+    if (addressCtl.text.isEmpty || RegExp(r'^\s+$').hasMatch(addressCtl.text)) {
       showErrorDialog('กรุณากรอกที่อยู่'); // "Please enter your address"
       return;
     }
@@ -433,6 +459,7 @@ class _RegisterUserpageState extends State<RegisterUserpage> {
     }
 
     // ถ้าข้อมูลครบถ้วน สามารถดำเนินการอัพโหลดและบันทึกข้อมูลต่อไปได้
+    showLoadingDialog(context, true);
     try {
       String fileName = DateTime.now().millisecondsSinceEpoch.toString();
       Reference ref = FirebaseStorage.instance.ref();
@@ -455,8 +482,6 @@ class _RegisterUserpageState extends State<RegisterUserpage> {
         picture: pictureUrl!,
       );
 
-      showLoadingDialog(context, true);
-
       final response = await http.post(
         Uri.parse("$url/user/register"),
         headers: {"Content-Type": "application/json; charset=utf-8"},
@@ -465,83 +490,164 @@ class _RegisterUserpageState extends State<RegisterUserpage> {
 
       log('Registration response: ${response.body}');
       Navigator.of(context).pop();
-      showDialog(
-        context: context,
-        builder: (BuildContext context) {
-          return Dialog(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Container(
-              width: MediaQuery.of(context).size.width * 0.8,
-              padding: const EdgeInsets.all(0),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: <Widget>[
-                  const Padding(
-                    padding: EdgeInsets.fromLTRB(0, 25, 10, 10),
-                    child: Center(
-                      child: Text(
-                        "สมัครสมาชิกสำเร็จ!", // "Success"
-                        style: TextStyle(
-                          fontSize: 23,
-                          fontWeight: FontWeight.bold,
+      if (response.statusCode == 201) {
+        showDialog(
+          barrierDismissible: false,
+          context: context,
+          builder: (BuildContext context) {
+            return Dialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Container(
+                width: MediaQuery.of(context).size.width * 0.8,
+                padding: const EdgeInsets.all(0),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: <Widget>[
+                    const Padding(
+                      padding: EdgeInsets.fromLTRB(0, 25, 10, 10),
+                      child: Center(
+                        child: Text(
+                          "สมัครสมาชิกสำเร็จ!", // "Success"
+                          style: TextStyle(
+                            fontSize: 23,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                  const Divider(),
-                  const SizedBox(height: 10),
-                  const Padding(
-                    padding: EdgeInsets.all(10),
-                    child: Text(
-                      "ยินดีตอนรับสู่ระบบขนส่ง HERMES ครับ", // "Item sent successfully"
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 15,
+                    const Divider(),
+                    const SizedBox(height: 10),
+                    const Padding(
+                      padding: EdgeInsets.all(10),
+                      child: Text(
+                        "ยินดีต้อนรับสู่ระบบขนส่ง HERMES ครับ", // "Item sent successfully"
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 15,
+                        ),
                       ),
                     ),
-                  ),
-                  const SizedBox(height: 10),
-                  // const Divider(),
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(0, 5, 0, 10),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      children: <Widget>[
-                        SizedBox(
-                          width: screenWidth * 0.6,
-                          height: screenHeight * 0.06,
-                          child: FilledButton(
-                            onPressed: () {
-                              Navigator.pop(context);
-                              Navigator.pop(context);
-                              Navigator.pop(context);
-                            },
-                            style: ButtonStyle(
-                              backgroundColor: MaterialStateProperty.all(
-                                  Color(0xFFFF7723)), // สีพื้นหลัง
-                            ),
-                            child: const Text(
-                              'ตกลง',
-                              style: TextStyle(
-                                fontSize: 20,
-                                color: Colors
-                                    .white, // เปลี่ยนสีข้อความให้เหมาะสมกับพื้นหลัง
-                                fontWeight: FontWeight.bold,
+                    const SizedBox(height: 10),
+                    // const Divider(),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(0, 5, 0, 10),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        children: <Widget>[
+                          SizedBox(
+                            width: screenWidth * 0.6,
+                            height: screenHeight * 0.06,
+                            child: FilledButton(
+                              onPressed: () {
+                                Navigator.pop(context);
+                                Navigator.pop(context);
+                                Navigator.pop(context);
+                              },
+                              style: ButtonStyle(
+                                backgroundColor: MaterialStateProperty.all(
+                                    const Color(0xFFFF7723)), // สีพื้นหลัง
+                              ),
+                              child: const Text(
+                                'ตกลง',
+                                style: TextStyle(
+                                  fontSize: 20,
+                                  color: Colors
+                                      .white, // เปลี่ยนสีข้อความให้เหมาะสมกับพื้นหลัง
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
                             ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-          );
-        },
-      );
+            );
+          },
+        );
+      } else {
+        showDialog(
+          barrierDismissible: false,
+          context: context,
+          builder: (BuildContext context) {
+            return Dialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Container(
+                width: MediaQuery.of(context).size.width * 0.8,
+                padding: const EdgeInsets.all(0),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: <Widget>[
+                    const Padding(
+                      padding: EdgeInsets.fromLTRB(0, 25, 10, 10),
+                      child: Center(
+                        child: Text(
+                          "สมัครสมาชิกไม่สำเร็จ", // "Success"
+                          style: TextStyle(
+                            fontSize: 23,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const Divider(),
+                    const SizedBox(height: 10),
+                    const Padding(
+                      padding: EdgeInsets.all(10),
+                      child: Text(
+                        "เบอร์นี้ถูกใช้แล้ว", // "Item sent successfully"
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 15,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    // const Divider(),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(0, 5, 0, 10),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        children: <Widget>[
+                          SizedBox(
+                            width: screenWidth * 0.6,
+                            height: screenHeight * 0.06,
+                            child: FilledButton(
+                              onPressed: () {
+                                Get.back();
+                                Get.back();
+                              },
+                              style: ButtonStyle(
+                                backgroundColor: MaterialStateProperty.all(
+                                    const Color(0xFFFF7723)), // สีพื้นหลัง
+                              ),
+                              child: const Text(
+                                'ตกลง',
+                                style: TextStyle(
+                                  fontSize: 20,
+                                  color: Colors
+                                      .white, // เปลี่ยนสีข้อความให้เหมาะสมกับพื้นหลัง
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      }
     } catch (error) {
       log('Error during registration: $error');
       showErrorDialog(
@@ -638,7 +744,7 @@ class _RegisterUserpageState extends State<RegisterUserpage> {
                           },
                           style: ButtonStyle(
                             backgroundColor: MaterialStateProperty.all(
-                                Color(0xFFFF7723)), // สีพื้นหลัง
+                                const Color(0xFFFF7723)), // สีพื้นหลัง
                           ),
                           child: const Text(
                             'ตกลง',

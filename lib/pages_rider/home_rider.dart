@@ -11,12 +11,14 @@ import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:hermes_app/config/config.dart';
+import 'package:hermes_app/config/share.dart';
 import 'package:hermes_app/models/response/order_firebase_res.dart';
 import 'package:hermes_app/pages_rider/status_rider.dart';
 import 'package:hermes_app/pages_user/edit_profile_user.dart';
 import 'package:hermes_app/pages_user/status.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:http/http.dart' as http;
+import 'package:provider/provider.dart';
 
 class HomeRiderpage extends StatefulWidget {
   const HomeRiderpage({
@@ -35,7 +37,6 @@ class _HomeRiderpageState extends State<HomeRiderpage> {
   final box = GetStorage();
 
   var db = FirebaseFirestore.instance;
-  late StreamSubscription listener;
 
   List<OrderRes> ordersReceive = [];
 
@@ -43,19 +44,21 @@ class _HomeRiderpageState extends State<HomeRiderpage> {
 
   final Set<Marker> _markers = {};
   late GoogleMapController mapController;
-
-  StreamSubscription<Position>? locationSubscription;
   late LatLng currentLatLng;
 
   String docOrderId = "";
 
+  bool isListeningLocation = false;
+  bool isListening = false;
   @override
   void initState() {
+    stopRealtimeGetStatus();
+    readData();
     checkOrder();
     super.initState();
     getApiKey();
-    startLocationUpdates();
-    startRealtimeGet();
+    startLocationUpdateHome();
+    startRealtimeGetHome();
     currentLatLng = LatLng(box.read('curLat'), box.read('curLng'));
     initPosition = CameraPosition(
       target: LatLng(box.read('curLat'), box.read('curLng')),
@@ -64,8 +67,8 @@ class _HomeRiderpageState extends State<HomeRiderpage> {
 
   @override
   void dispose() {
-    listener?.cancel(); // Cancel Firestore listener
-    locationSubscription?.cancel(); // Cancel location updates
+    stopRealtimeGetHome();
+    stopLocationUpdatesHome();
     super.dispose();
   }
 
@@ -76,9 +79,8 @@ class _HomeRiderpageState extends State<HomeRiderpage> {
     return PopScope(
       canPop: false,
       onPopInvoked: (didpop) async {
-        if (listener != null) {
-          listener?.cancel();
-        }
+        stopRealtimeGetHome();
+        stopLocationUpdatesHome();
       },
       child: Scaffold(
         backgroundColor: Colors.white,
@@ -347,24 +349,25 @@ class _HomeRiderpageState extends State<HomeRiderpage> {
     }
   }
 
-  Future<void> checkOrder() async {
+  void checkOrder() async {
     var check = await db
         .collection("order")
         .where('riderRid', isEqualTo: box.read('uid'))
         .get();
     if (check.docs.isNotEmpty) {
-      ordersReceive = check.docs.map((doc) {
+      List<OrderRes> ordersReceive1 = check.docs.map((doc) {
         return OrderRes.fromFirestore(doc.data(), doc.id);
       }).toList();
 
       List<OrderRes> orders =
-          ordersReceive.where((order) => int.parse(order.status) < 4).toList();
+          ordersReceive1.where((order) => int.parse(order.status) < 4).toList();
       for (var order in orders) {
         log("ORDERS:${order.status}");
       }
       if (orders.isNotEmpty && orders[0].documentId != '') {
         Get.to(() => StatusRider(docId: orders[0].documentId));
       }
+      // log("check order${ordersReceive1.length}");
     }
   }
 
@@ -377,13 +380,17 @@ class _HomeRiderpageState extends State<HomeRiderpage> {
   }
 
   Future<void> readData() async {
+    ordersReceive.clear();
     await initializeDateFormatting('th', null);
     var result =
         await db.collection('order').where('status', isEqualTo: 1).get();
-    // log(result.docs.length.toString());
+    log(result.docs.length.toString());
 
-    ordersReceive =
-        result.docs.where((doc) => doc.data()['riderRid'] == null).map((doc) {
+    // ordersReceive =
+    //     result.docs.where((doc) => doc.data()['riderRid'] == null).map((doc) {
+    //   return OrderRes.fromFirestore(doc.data(), doc.id);
+    // }).toList();
+    ordersReceive = result.docs.map((doc) {
       return OrderRes.fromFirestore(doc.data(), doc.id);
     }).toList();
     // log(ordersReceive.length.toString());
@@ -391,9 +398,7 @@ class _HomeRiderpageState extends State<HomeRiderpage> {
     // Sort by time latest first
     ordersReceive.sort((a, b) => a.createAt.compareTo(b.createAt));
 
-    if (mounted) {
-      setState(() {});
-    }
+    setState(() {});
   }
 
   void _addMarkerRider() {
@@ -427,40 +432,68 @@ class _HomeRiderpageState extends State<HomeRiderpage> {
     ));
   }
 
-  Future<void> startCheckOrder() async {
-    final docRef1 =
-        db.collection("order").where('riderRid', isEqualTo: box.read('uid'));
-    docRef1.snapshots().listen((event) {
+  void startRealtimeGetHome() {
+    final docRef = db.collection("order").where("status", isEqualTo: 1);
+    context.read<AppData>().listenerHome = docRef.snapshots().listen((event) {
       setState(() {
         readData();
       });
     }, onError: (error) => log("Listen failed"));
   }
 
-  Future<void> startRealtimeGet() async {
-    final docRef = db.collection("order").where("status", isEqualTo: 1);
-    listener = docRef.snapshots().listen((event) {
-      if (mounted) {
-        setState(() {
-          readData();
-        });
-      }
-    }, onError: (error) => log("Listen failed"));
+  void stopRealtimeGetHome() {
+    try {
+      context.read<AppData>().listenerHome.cancel().then((value) {
+        log('Listener Cancle');
+      });
+    } catch (e) {
+      log('Listener is not runing...');
+    }
   }
 
-  Future<void> startLocationUpdates() async {
+  void stopRealtimeGetStatus() {
+    try {
+      context.read<AppData>().listenerStatus.cancel().then((value) {
+        log('Listener Cancle');
+      });
+    } catch (e) {
+      log('Listener is not runing...');
+    }
+  }
+
+  void startLocationUpdateHome() async {
     LocationSettings locationSettings = const LocationSettings(
       accuracy: LocationAccuracy.high,
-      distanceFilter: 10,
+      distanceFilter: 5,
     );
 
-    locationSubscription =
+    context.read<AppData>().locationSubscriptionHome =
         Geolocator.getPositionStream(locationSettings: locationSettings)
             .listen((Position position) async {
       currentLatLng = LatLng(position.latitude, position.longitude);
       log('Current Location: $currentLatLng');
     });
     setState(() {});
+  }
+
+  void stopLocationUpdatesHome() {
+    try {
+      context.read<AppData>().locationSubscriptionHome.cancel().then((value) {
+        log('Location Cancle');
+      });
+    } catch (e) {
+      log('Location is not runing...');
+    }
+  }
+
+  void stopLocationUpdateStatus() {
+    try {
+      context.read<AppData>().locationSubscriptionStatus.cancel().then((value) {
+        log('Location Cancle');
+      });
+    } catch (e) {
+      log('Location is not runing...');
+    }
   }
 
   Future<void> _fitAllMarkers() async {

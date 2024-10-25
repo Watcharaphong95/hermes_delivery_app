@@ -36,7 +36,6 @@ class _StatuspageState extends State<Statuspage> {
   final Set<Polyline> _polylines = {};
 
   var db = FirebaseFirestore.instance;
-  late StreamSubscription listener;
 
   List<OrderRes> orders = [];
   List<SelectRiderRid> riderData = [];
@@ -47,6 +46,8 @@ class _StatuspageState extends State<Statuspage> {
 
   late LatLng destination;
   late LatLng userLocation;
+
+  late StreamSubscription listener;
 
   bool _isLoading = false;
   String pictureUrl = '';
@@ -63,7 +64,6 @@ class _StatuspageState extends State<Statuspage> {
     super.initState();
     readData();
     log(widget.docId);
-    startLocationUpdates();
     startRealtimeGet();
     initPosition =
         CameraPosition(target: LatLng(box.read('curLat'), box.read('curLng')));
@@ -81,273 +81,281 @@ class _StatuspageState extends State<Statuspage> {
     screenWidth = MediaQuery.of(context).size.width;
     screenHeight = MediaQuery.of(context).size.height;
 
-    return Scaffold(
-      body: Stack(
-        children: [
-          Column(
-            children: [
-              Container(
-                width: screenWidth,
-                height: screenHeight * 0.35,
-                decoration: const BoxDecoration(
-                  color: Color(0xFF2C262A),
-                  borderRadius: BorderRadius.only(
-                    bottomLeft: Radius.circular(18),
-                    bottomRight: Radius.circular(18),
+    return PopScope(
+      onPopInvoked: (didPop) {
+        if (listener != null) {
+          listener.cancel();
+        }
+      },
+      child: Scaffold(
+        body: Stack(
+          children: [
+            Column(
+              children: [
+                Container(
+                  width: screenWidth,
+                  height: screenHeight * 0.35,
+                  decoration: const BoxDecoration(
+                    color: Color(0xFF2C262A),
+                    borderRadius: BorderRadius.only(
+                      bottomLeft: Radius.circular(18),
+                      bottomRight: Radius.circular(18),
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(20, 50, 20, 0),
+                        child: IconButton(
+                          icon: const Icon(
+                            Icons.arrow_back,
+                            color: Colors.white,
+                            size: 30,
+                          ),
+                          onPressed: () {
+                            Navigator.pop(context);
+                          },
+                        ),
+                      ),
+                      Center(
+                        child: Image.asset(
+                          'assets/images/Logo_status.png',
+                          width: screenWidth * 0.7,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(20, 50, 20, 0),
-                      child: IconButton(
-                        icon: const Icon(
-                          Icons.arrow_back,
-                          color: Colors.white,
-                          size: 30,
-                        ),
-                        onPressed: () {
-                          Navigator.pop(context);
-                        },
-                      ),
-                    ),
-                    Center(
-                      child: Image.asset(
-                        'assets/images/Logo_status.png',
-                        width: screenWidth * 0.7,
-                      ),
-                    ),
-                  ],
+              ],
+            ),
+            Padding(
+              padding: EdgeInsets.fromLTRB(
+                screenWidth * 0.045,
+                screenHeight * 0.28,
+                screenWidth * 0.045,
+                0,
+              ),
+              child: Container(
+                width: screenWidth,
+                height: screenHeight * 1,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE8E8E8),
+                  borderRadius: BorderRadius.circular(18),
                 ),
               ),
-            ],
-          ),
-          Padding(
-            padding: EdgeInsets.fromLTRB(
-              screenWidth * 0.045,
-              screenHeight * 0.28,
-              screenWidth * 0.045,
-              0,
             ),
-            child: Container(
-              width: screenWidth,
-              height: screenHeight * 1,
-              decoration: BoxDecoration(
-                color: const Color(0xFFE8E8E8),
-                borderRadius: BorderRadius.circular(18),
+            Padding(
+              padding: EdgeInsets.fromLTRB(
+                screenWidth * 0.1,
+                screenHeight * 0.3,
+                screenWidth * 0.1,
+                0,
+              ),
+              child: SizedBox(
+                width: screenWidth * 0.8,
+                height: screenHeight * 0.25,
+                child: GoogleMap(
+                  mapType: MapType.normal,
+                  initialCameraPosition: initPosition,
+                  markers: _markers,
+                  polylines: _polylines,
+                  onMapCreated: (GoogleMapController controller) {
+                    mapController = controller;
+                    Future.delayed(const Duration(milliseconds: 200), () {
+                      _fitAllMarkers();
+                    }); // Fit all markers when the map is created
+                  },
+                  zoomGesturesEnabled: true,
+                  scrollGesturesEnabled: true,
+                  zoomControlsEnabled: true,
+                ),
               ),
             ),
-          ),
-          Padding(
-            padding: EdgeInsets.fromLTRB(
-              screenWidth * 0.1,
-              screenHeight * 0.3,
-              screenWidth * 0.1,
-              0,
+            Container(
+              margin: EdgeInsets.fromLTRB(0, screenHeight * 0.58, 0, 0),
+              child: SingleChildScrollView(
+                child: orders.isEmpty
+                    ? const Center(child: CircularProgressIndicator())
+                    : Column(
+                        children: [
+                          Padding(
+                            padding: EdgeInsets.fromLTRB(
+                              screenWidth * 0.1,
+                              0,
+                              screenWidth * 0.1,
+                              0,
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                const Text('สถานะการจัดส่ง',
+                                    style: TextStyle(
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.bold,
+                                    )),
+                                Row(
+                                  children: [
+                                    distance != null
+                                        ? Text(distance.toString(),
+                                            style: const TextStyle(
+                                              fontSize: 20,
+                                              fontWeight: FontWeight.bold,
+                                            ))
+                                        : const Center(
+                                            child: CircularProgressIndicator()),
+                                    SizedBox(
+                                      width: screenWidth * 0.02,
+                                    ),
+                                    duration != null
+                                        ? Text(duration.toString(),
+                                            style: const TextStyle(
+                                              fontSize: 20,
+                                              fontWeight: FontWeight.bold,
+                                            ))
+                                        : const Center(
+                                            child: CircularProgressIndicator()),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                          Padding(
+                            padding: EdgeInsets.fromLTRB(
+                              screenWidth * 0.1,
+                              screenHeight * 0.02,
+                              screenWidth * 0.1,
+                              0,
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                _buildStatusStep('ไรเดอร์\nรับงาน', Icons.inbox,
+                                    int.parse(orders[0].status) > 1),
+                                _buildConnectorLine(
+                                    int.parse(orders[0].status) >= 2),
+                                _buildStatusStep(
+                                    'รอไรเดอร์\nมารับสินค้า',
+                                    Icons.directions_bike,
+                                    int.parse(orders[0].status) >= 2),
+                                _buildConnectorLine(
+                                    int.parse(orders[0].status) >= 3),
+                                _buildStatusStep(
+                                    'รับสินค้าแล้ว\nกำลังเดินทาง',
+                                    Icons.local_shipping,
+                                    int.parse(orders[0].status) >= 3),
+                                _buildConnectorLine(
+                                    int.parse(orders[0].status) >= 4),
+                                _buildStatusStep(
+                                    'ส่งสินค้า\nเสร็จสิ้น',
+                                    Icons.done_all,
+                                    int.parse(orders[0].status) >= 4),
+                              ],
+                            ),
+                          ),
+                          Padding(
+                            padding: EdgeInsets.fromLTRB(
+                                0, screenHeight * 0.03, 0, screenHeight * 0.01),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                _buildStatusButton(2, 'รอไรเดอร์\nมารับสินค้า',
+                                    int.parse(orders[0].status) >= 1),
+                                const SizedBox(width: 8),
+                                _buildStatusButton(3, 'ไรเดอร์รับ\nสินค้า',
+                                    int.parse(orders[0].status) >= 2),
+                                const SizedBox(width: 8),
+                                _buildStatusButton(4, 'ส่งสินค้า\nเสร็จสิ้น',
+                                    int.parse(orders[0].status) >= 3),
+                              ],
+                            ),
+                          ),
+                          Padding(
+                            padding: EdgeInsets.fromLTRB(
+                              screenWidth * 0.1,
+                              screenHeight * 0.04,
+                              screenWidth * 0.1,
+                              0,
+                            ),
+                            child: Container(
+                              width: screenWidth * 0.9,
+                              height: screenHeight * 0.3,
+                              decoration: BoxDecoration(
+                                border:
+                                    Border.all(color: Colors.black, width: 1),
+                                borderRadius: BorderRadius.circular(8.0),
+                              ),
+                              child: InkWell(
+                                // onTap: imagePicker,
+                                child: Center(
+                                  // Center the image within the container
+                                  child: (_activeButtonIndex == 2)
+                                      ? showImagePerStaus(screenWidth,
+                                          screenHeight, _activeButtonIndex)
+                                      : (_activeButtonIndex == 3)
+                                          ? showImagePerStaus(screenWidth,
+                                              screenHeight, _activeButtonIndex)
+                                          : (_activeButtonIndex == 4)
+                                              ? showImagePerStaus(
+                                                  screenWidth,
+                                                  screenHeight,
+                                                  _activeButtonIndex)
+                                              : noImagePerStatus(
+                                                  screenWidth, screenHeight),
+                                ),
+                              ),
+                            ),
+                          ),
+                          Padding(
+                            padding: EdgeInsets.symmetric(
+                                horizontal: screenWidth * 0.1,
+                                vertical: screenHeight * 0.01),
+                            child: riderData.isNotEmpty
+                                ? Container(
+                                    decoration: BoxDecoration(
+                                      color: Colors
+                                          .lightBlue[100], // Background color
+                                      borderRadius: BorderRadius.circular(
+                                          12), // Rounded corners
+                                      boxShadow: const [
+                                        BoxShadow(
+                                          color: Colors.black26, // Shadow color
+                                          offset: Offset(0, 4), // Shadow offset
+                                          blurRadius: 8, // Shadow blur
+                                        ),
+                                      ],
+                                    ),
+                                    padding: const EdgeInsets.all(
+                                        16.0), // Internal padding
+                                    child: Text(
+                                      'ผู้ส่ง\n'
+                                      'ชื่อ: ${riderData[0].name}\n'
+                                      'ป้ายทะเบียน: ${riderData[0].plate}\n'
+                                      'เบอร์โทร: ${riderData[0].phone}',
+                                      style: const TextStyle(fontSize: 18),
+                                    ))
+                                : const Text('Loading'),
+                          ),
+                        ],
+                      ),
+              ),
             ),
-            child: SizedBox(
-              width: screenWidth * 0.8,
-              height: screenHeight * 0.25,
-              child: GoogleMap(
-                mapType: MapType.normal,
-                initialCameraPosition: initPosition,
-                markers: _markers,
-                polylines: _polylines,
-                onMapCreated: (GoogleMapController controller) {
-                  mapController = controller;
-                  Future.delayed(const Duration(milliseconds: 200), () {
-                    _fitAllMarkers();
-                  }); // Fit all markers when the map is created
+            Positioned(
+              top: screenHeight * 0.3,
+              right: screenWidth * 0.1,
+              child: FloatingActionButton.small(
+                onPressed: () async {
+                  // Move the map camera to the user's location
+                  mapController.animateCamera(
+                    CameraUpdate.newLatLng(
+                        LatLng(riders[0].latitude, riders[0].longitude)),
+                  );
                 },
-                zoomGesturesEnabled: true,
-                scrollGesturesEnabled: true,
-                zoomControlsEnabled: true,
+                child: const Icon(Icons.my_location),
               ),
             ),
-          ),
-          Container(
-            margin: EdgeInsets.fromLTRB(0, screenHeight * 0.58, 0, 0),
-            child: SingleChildScrollView(
-              child: orders.isEmpty
-                  ? const Center(child: CircularProgressIndicator())
-                  : Column(
-                      children: [
-                        Padding(
-                          padding: EdgeInsets.fromLTRB(
-                            screenWidth * 0.1,
-                            0,
-                            screenWidth * 0.1,
-                            0,
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              const Text('สถานะการจัดส่ง',
-                                  style: TextStyle(
-                                    fontSize: 20,
-                                    fontWeight: FontWeight.bold,
-                                  )),
-                              Row(
-                                children: [
-                                  distance != null
-                                      ? Text(distance.toString(),
-                                          style: const TextStyle(
-                                            fontSize: 20,
-                                            fontWeight: FontWeight.bold,
-                                          ))
-                                      : const Center(
-                                          child: CircularProgressIndicator()),
-                                  SizedBox(
-                                    width: screenWidth * 0.02,
-                                  ),
-                                  duration != null
-                                      ? Text(duration.toString(),
-                                          style: const TextStyle(
-                                            fontSize: 20,
-                                            fontWeight: FontWeight.bold,
-                                          ))
-                                      : const Center(
-                                          child: CircularProgressIndicator()),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-                        Padding(
-                          padding: EdgeInsets.fromLTRB(
-                            screenWidth * 0.1,
-                            screenHeight * 0.02,
-                            screenWidth * 0.1,
-                            0,
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              _buildStatusStep('ไรเดอร์\nรับงาน', Icons.inbox,
-                                  int.parse(orders[0].status) > 1),
-                              _buildConnectorLine(
-                                  int.parse(orders[0].status) >= 2),
-                              _buildStatusStep(
-                                  'รอไรเดอร์\nมารับสินค้า',
-                                  Icons.directions_bike,
-                                  int.parse(orders[0].status) >= 2),
-                              _buildConnectorLine(
-                                  int.parse(orders[0].status) >= 3),
-                              _buildStatusStep(
-                                  'รับสินค้าแล้ว\nกำลังเดินทาง',
-                                  Icons.local_shipping,
-                                  int.parse(orders[0].status) >= 3),
-                              _buildConnectorLine(
-                                  int.parse(orders[0].status) >= 4),
-                              _buildStatusStep(
-                                  'ส่งสินค้า\nเสร็จสิ้น',
-                                  Icons.done_all,
-                                  int.parse(orders[0].status) >= 4),
-                            ],
-                          ),
-                        ),
-                        Padding(
-                          padding: EdgeInsets.fromLTRB(
-                              0, screenHeight * 0.03, 0, screenHeight * 0.01),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              _buildStatusButton(2, 'รอไรเดอร์\nมารับสินค้า',
-                                  int.parse(orders[0].status) >= 1),
-                              const SizedBox(width: 8),
-                              _buildStatusButton(3, 'ไรเดอร์รับ\nสินค้า',
-                                  int.parse(orders[0].status) >= 2),
-                              const SizedBox(width: 8),
-                              _buildStatusButton(4, 'ส่งสินค้า\nเสร็จสิ้น',
-                                  int.parse(orders[0].status) >= 3),
-                            ],
-                          ),
-                        ),
-                        Padding(
-                          padding: EdgeInsets.fromLTRB(
-                            screenWidth * 0.1,
-                            screenHeight * 0.04,
-                            screenWidth * 0.1,
-                            0,
-                          ),
-                          child: Container(
-                            width: screenWidth * 0.9,
-                            height: screenHeight * 0.3,
-                            decoration: BoxDecoration(
-                              border: Border.all(color: Colors.black, width: 1),
-                              borderRadius: BorderRadius.circular(8.0),
-                            ),
-                            child: InkWell(
-                              // onTap: imagePicker,
-                              child: Center(
-                                // Center the image within the container
-                                child: (_activeButtonIndex == 2)
-                                    ? showImagePerStaus(screenWidth,
-                                        screenHeight, _activeButtonIndex)
-                                    : (_activeButtonIndex == 3)
-                                        ? showImagePerStaus(screenWidth,
-                                            screenHeight, _activeButtonIndex)
-                                        : (_activeButtonIndex == 4)
-                                            ? showImagePerStaus(
-                                                screenWidth,
-                                                screenHeight,
-                                                _activeButtonIndex)
-                                            : noImagePerStatus(
-                                                screenWidth, screenHeight),
-                              ),
-                            ),
-                          ),
-                        ),
-                        Padding(
-                          padding: EdgeInsets.symmetric(
-                              horizontal: screenWidth * 0.1,
-                              vertical: screenHeight * 0.01),
-                          child: riderData.isNotEmpty
-                              ? Container(
-                                  decoration: BoxDecoration(
-                                    color: Colors
-                                        .lightBlue[100], // Background color
-                                    borderRadius: BorderRadius.circular(
-                                        12), // Rounded corners
-                                    boxShadow: const [
-                                      BoxShadow(
-                                        color: Colors.black26, // Shadow color
-                                        offset: Offset(0, 4), // Shadow offset
-                                        blurRadius: 8, // Shadow blur
-                                      ),
-                                    ],
-                                  ),
-                                  padding: const EdgeInsets.all(
-                                      16.0), // Internal padding
-                                  child: Text(
-                                    'ผู้ส่ง\n'
-                                    'ชื่อ: ${riderData[0].name}\n'
-                                    'ป้ายทะเบียน: ${riderData[0].plate}\n'
-                                    'เบอร์โทร: ${riderData[0].phone}',
-                                    style: const TextStyle(fontSize: 18),
-                                  ))
-                              : const Text('Loading'),
-                        ),
-                      ],
-                    ),
-            ),
-          ),
-          Positioned(
-            top: screenHeight * 0.3,
-            right: screenWidth * 0.1,
-            child: FloatingActionButton.small(
-              onPressed: () async {
-                // Move the map camera to the user's location
-                mapController.animateCamera(
-                  CameraUpdate.newLatLng(
-                      LatLng(riders[0].latitude, riders[0].longitude)),
-                );
-              },
-              child: const Icon(Icons.my_location),
-            ),
-          )
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -410,26 +418,89 @@ class _StatuspageState extends State<Statuspage> {
     if (orders[0].picture != '' && status == 2) {
       setState(() {});
       return Image.network(
-        orders[0].picture, fit: BoxFit.contain,
+        orders[0].picture,
+        fit: BoxFit.contain,
         width: screenWidth *
             0.85, // Ensure the image doesn't overflow horizontally
         height: screenHeight * 0.3,
+        loadingBuilder: (BuildContext context, Widget child,
+            ImageChunkEvent? loadingProgress) {
+          if (loadingProgress == null) {
+            return child; // Return the image once it's loaded
+          }
+          return Center(
+            child: CircularProgressIndicator(
+              value: loadingProgress.expectedTotalBytes != null
+                  ? loadingProgress.cumulativeBytesLoaded /
+                      (loadingProgress.expectedTotalBytes ?? 1)
+                  : null, // Show the progress if available
+            ),
+          );
+        },
+        errorBuilder:
+            (BuildContext context, Object error, StackTrace? stackTrace) {
+          return const Center(
+              child: Text(
+                  'Error loading image')); // Show an error message if the image fails to load
+        },
       );
     } else if (orders[0].picture_2 != '' && status == 3) {
       setState(() {});
       return Image.network(
-        orders[0].picture_2, fit: BoxFit.contain,
+        orders[0].picture_2,
+        fit: BoxFit.contain,
         width: screenWidth *
             0.85, // Ensure the image doesn't overflow horizontally
         height: screenHeight * 0.3,
+        loadingBuilder: (BuildContext context, Widget child,
+            ImageChunkEvent? loadingProgress) {
+          if (loadingProgress == null) {
+            return child; // Return the image once it's loaded
+          }
+          return Center(
+            child: CircularProgressIndicator(
+              value: loadingProgress.expectedTotalBytes != null
+                  ? loadingProgress.cumulativeBytesLoaded /
+                      (loadingProgress.expectedTotalBytes ?? 1)
+                  : null, // Show the progress if available
+            ),
+          );
+        },
+        errorBuilder:
+            (BuildContext context, Object error, StackTrace? stackTrace) {
+          return const Center(
+              child: Text(
+                  'Error loading image')); // Show an error message if the image fails to load
+        },
       );
     } else if (orders[0].picture_3 != '' && status == 4) {
       setState(() {});
       return Image.network(
-        orders[0].picture_3, fit: BoxFit.contain,
+        orders[0].picture_3,
+        fit: BoxFit.contain,
         width: screenWidth *
             0.85, // Ensure the image doesn't overflow horizontally
         height: screenHeight * 0.3,
+        loadingBuilder: (BuildContext context, Widget child,
+            ImageChunkEvent? loadingProgress) {
+          if (loadingProgress == null) {
+            return child; // Return the image once it's loaded
+          }
+          return Center(
+            child: CircularProgressIndicator(
+              value: loadingProgress.expectedTotalBytes != null
+                  ? loadingProgress.cumulativeBytesLoaded /
+                      (loadingProgress.expectedTotalBytes ?? 1)
+                  : null, // Show the progress if available
+            ),
+          );
+        },
+        errorBuilder:
+            (BuildContext context, Object error, StackTrace? stackTrace) {
+          return const Center(
+              child: Text(
+                  'Error loading image')); // Show an error message if the image fails to load
+        },
       );
     } else if (image != null) {
       return Image.file(
@@ -728,23 +799,42 @@ class _StatuspageState extends State<Statuspage> {
 
   void _addDestinationMarker() {
     setState(() {
-      _markers.add(Marker(
-        markerId: const MarkerId('destination'),
-        position: destination,
-        infoWindow: const InfoWindow(title: 'Destination'),
-        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
-      ));
+      if (orders[0].receiverUid == box.read('uid')) {
+        _markers.add(Marker(
+          markerId: const MarkerId('destination'),
+          position: destination,
+          infoWindow: const InfoWindow(title: 'You'),
+          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue),
+        ));
+      } else {
+        _markers.add(Marker(
+          markerId: const MarkerId('destination'),
+          position: destination,
+          infoWindow: const InfoWindow(title: 'Destiantion'),
+          icon:
+              BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
+        ));
+      }
     });
   }
 
   void _addUserMarker() {
     setState(() {
-      _markers.add(Marker(
-        markerId: const MarkerId('user'),
-        position: userLocation,
-        infoWindow: const InfoWindow(title: 'You'),
-        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue),
-      ));
+      if (orders[0].senderUid == box.read('uid')) {
+        _markers.add(Marker(
+          markerId: const MarkerId('user'),
+          position: userLocation,
+          infoWindow: const InfoWindow(title: 'You'),
+          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue),
+        ));
+      } else {
+        _markers.add(Marker(
+          markerId: const MarkerId('user'),
+          position: userLocation,
+          infoWindow: const InfoWindow(title: 'Sender'),
+          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
+        ));
+      }
     });
   }
 
@@ -807,13 +897,6 @@ class _StatuspageState extends State<Statuspage> {
     final ByteData data = await rootBundle.load('assets/images/rider.png');
     final Uint8List bytes = data.buffer.asUint8List();
     return BitmapDescriptor.fromBytes(bytes);
-  }
-
-  void startLocationUpdates() {
-    LocationSettings locationSettings = const LocationSettings(
-      accuracy: LocationAccuracy.high,
-      distanceFilter: 10,
-    );
   }
 
   void startRealtimeGet() {

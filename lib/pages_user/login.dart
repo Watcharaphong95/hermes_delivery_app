@@ -22,6 +22,7 @@ class LoginPage extends StatefulWidget {
 
 class _LoginPageState extends State<LoginPage> {
   final box = GetStorage();
+  final RxBool isPasswordVisible = true.obs;
   TextEditingController phoneCtl = TextEditingController();
   TextEditingController passwordCtl = TextEditingController();
   String url = '';
@@ -152,15 +153,24 @@ class _LoginPageState extends State<LoginPage> {
                               borderRadius: BorderRadius.circular(30),
                             ),
                             child: TextField(
+                              obscureText: isPasswordVisible.value,
                               controller: passwordCtl,
-                              decoration: const InputDecoration(
-                                prefixIcon: Icon(Icons.lock),
-                                hintText: 'รหัส',
-                                hintStyle: TextStyle(
-                                    fontSize: 14,
-                                    color: Color.fromARGB(97, 0, 0, 0)),
-                                border: InputBorder.none,
-                              ),
+                              decoration: InputDecoration(
+                                  prefixIcon: const Icon(Icons.lock),
+                                  hintText: 'รหัส',
+                                  hintStyle: const TextStyle(
+                                      fontSize: 14,
+                                      color: Color.fromARGB(97, 0, 0, 0)),
+                                  border: InputBorder.none,
+                                  suffixIcon: IconButton(
+                                      onPressed: () {
+                                        isPasswordVisible.value =
+                                            !isPasswordVisible.value;
+                                        setState(() {});
+                                      },
+                                      icon: Icon(isPasswordVisible.value
+                                          ? Icons.visibility_off
+                                          : Icons.visibility))),
                             ),
                           ),
                         ),
@@ -393,7 +403,7 @@ class _LoginPageState extends State<LoginPage> {
                           },
                           style: ButtonStyle(
                             backgroundColor: MaterialStateProperty.all(
-                                Color(0xFFFF7723)), // สีพื้นหลัง
+                                const Color(0xFFFF7723)), // สีพื้นหลัง
                           ),
                           child: const Text(
                             'ตกลง',

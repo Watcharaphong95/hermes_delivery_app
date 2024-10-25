@@ -2,9 +2,11 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:developer';
 import 'dart:math' as math hide log;
+import 'dart:typed_data';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_polyline_points/flutter_polyline_points.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
@@ -13,6 +15,7 @@ import 'package:hermes_app/models/response/order_firebase_res.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
+import 'dart:ui' as ui;
 
 class AllStatus extends StatefulWidget {
   bool isReceive;
@@ -69,7 +72,9 @@ class _AllStatusState extends State<AllStatus> {
     double screenHeight = MediaQuery.of(context).size.height;
     return PopScope(
       onPopInvoked: (didPop) async {
-        listener.cancel();
+        if (listener != null) {
+          listener.cancel();
+        }
       },
       child: Scaffold(
         body: Stack(
@@ -202,21 +207,41 @@ class _AllStatusState extends State<AllStatus> {
                   return Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(
-                        Icons.directions_bike,
-                        color: _getUniqueColor(index),
-                        size: 50,
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.directions_bike,
+                            color: _getUniqueColor(index),
+                            size: 50,
+                          ),
+                          Text('Rider $index'),
+                        ],
                       ),
                       const SizedBox(width: 10),
-                      Text('Rider $index'),
-                      const SizedBox(width: 10),
-                      Icon(
-                        Icons.pin_drop,
-                        color: _getUniqueColor(index),
-                        size: 50,
+                      Container(
+                          width: screenWidth * 0.2,
+                          height: screenHeight * 0.075,
+                          decoration: BoxDecoration(
+                              color: Colors.grey[300],
+                              borderRadius: BorderRadius.circular(10)),
+                          child: Center(
+                            child: Text(
+                              getStatus(orders[0].status),
+                              style: TextStyle(
+                                  color: getStatusColor(orders[0].status)),
+                              textAlign: TextAlign.center,
+                            ),
+                          )),
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.pin_drop,
+                            color: _getUniqueColor(index),
+                            size: 50,
+                          ),
+                          Text('Target $index'),
+                        ],
                       ),
-                      const SizedBox(width: 10),
-                      Text('Target $index'),
                     ],
                   );
                 },
@@ -456,17 +481,48 @@ class _AllStatusState extends State<AllStatus> {
       String riderLabel, Color color) async {
     double hueValue = HSVColor.fromColor(color).hue;
     riderMarker++;
-    BitmapDescriptor customMarker =
-        BitmapDescriptor.defaultMarkerWithHue(hueValue);
+    BitmapDescriptor riderIcon = await _loadRiderIcon(color);
     setState(() {
       _markers.add(Marker(
         markerId: MarkerId('rider_${rider.latitude}_${rider.longitude}'),
         position: rider,
         infoWindow: InfoWindow(
             title: riderLabel, snippet: 'ระยะทาง $distance เวลา ~$duration'),
-        icon: customMarker,
+        icon: riderIcon,
       ));
     });
+  }
+
+  Future<BitmapDescriptor> _loadRiderIcon(Color color) async {
+    // Load the original image
+    final ByteData data = await rootBundle.load('assets/images/rider.png');
+    final Uint8List bytes = data.buffer.asUint8List();
+
+    // Decode the image
+    ui.Codec codec = await ui.instantiateImageCodec(bytes);
+    ui.FrameInfo frameInfo = await codec.getNextFrame();
+    ui.Image image = frameInfo.image;
+
+    // Create a new image with the desired color
+    final ui.PictureRecorder recorder = ui.PictureRecorder();
+    final Canvas canvas = Canvas(recorder);
+
+    // Draw the original image onto the canvas
+    Paint paint = Paint()
+      ..colorFilter = ui.ColorFilter.mode(color, ui.BlendMode.srcIn);
+
+    canvas.drawImage(image, Offset.zero, paint);
+
+    // End the recording and convert to an image
+    final ui.Image coloredImage =
+        await recorder.endRecording().toImage(image.width, image.height);
+
+    // Convert the colored image to a byte array
+    ByteData? byteData =
+        await coloredImage.toByteData(format: ui.ImageByteFormat.png);
+    final Uint8List pngBytes = byteData!.buffer.asUint8List();
+
+    return BitmapDescriptor.fromBytes(pngBytes);
   }
 
   Future<void> _addTargetMarker(LatLng target, String distance, String duration,
@@ -550,6 +606,40 @@ class _AllStatusState extends State<AllStatus> {
     double hue = (index * 40) % 360; // Rotating hue around the color wheel
     return HSVColor.fromAHSV(1.0, hue, 0.9, 0.9)
         .toColor(); // Full saturation and brightness
+  }
+
+  String getStatus(String status) {
+    switch (status) {
+      case "1":
+        return "รอไรเดอร์รับงาน"; // Waiting for the rider to pick up
+      case "2":
+        return "ไรเดอร์รับงาน และกำลังเดินทางไปเอาสินค้า"; // Rider has accepted the job
+      case "3":
+        return "ไรเดอร์รับสินค้าแล้วและกำลังเดินทาง"; // Rider has picked up the item and is on the way
+      case "4":
+        return "ไรเดอร์นำส่งสินค้าแล้ว"; // Rider has delivered the item
+      case "5":
+        return "ยกเลิก"; // Canceled
+      default:
+        return "สถานะไม่ระบุ"; // Status unknown
+    }
+  }
+
+  Color getStatusColor(String status) {
+    switch (status) {
+      case "1":
+        return const Color(0xFFFFC107); // Amber for "Waiting for the rider"
+      case "2":
+        return const Color(0xFFF3A72B); // Orange
+      case "3":
+        return const Color(0xFF2196F3); // Blue
+      case "4":
+        return const Color(0xFF4CAF50); // Green
+      case "5":
+        return const Color(0xFFFF5722); // Red
+      default:
+        return const Color(0xFF000000); // Default
+    }
   }
 }
 

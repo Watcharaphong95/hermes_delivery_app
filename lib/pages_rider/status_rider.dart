@@ -13,6 +13,7 @@ import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:hermes_app/config/config.dart';
+import 'package:hermes_app/config/share.dart';
 import 'package:hermes_app/models/response/order_firebase_res.dart';
 import 'package:hermes_app/models/response/user_search_res.dart';
 import 'package:hermes_app/navbar/navbottomRider.dart';
@@ -20,6 +21,7 @@ import 'package:hermes_app/pages_rider/home_rider.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:provider/provider.dart';
 
 class StatusRider extends StatefulWidget {
   String docId = "";
@@ -42,8 +44,6 @@ class _StatuspageState extends State<StatusRider> {
   final Set<Polyline> _polylines = {};
 
   var db = FirebaseFirestore.instance;
-  late StreamSubscription? listener;
-  StreamSubscription<Position>? locationSubscription;
 
   List<OrderRes> orders = [];
 
@@ -70,20 +70,23 @@ class _StatuspageState extends State<StatusRider> {
 
   double screenWidth = 0;
   double screenHeight = 0;
+
   @override
   void initState() {
+    stopRealtimeGetHome();
+    stopLocationUpdatesHome();
     Future.delayed(const Duration(seconds: 2));
     super.initState();
     readData();
-    startLocationUpdates();
-    startRealtimeGet();
+    startRealtimeGetStatus();
+    startLocationUpdateStatus();
     log(widget.docId);
   }
 
   @override
   void dispose() {
-    listener?.cancel(); // Cancel Firestore listener
-    locationSubscription?.cancel(); // Cancel location updates
+    stopRealtimeGetStatus();
+    stopLocationUpdatesStatus();
     super.dispose();
   }
 
@@ -93,6 +96,11 @@ class _StatuspageState extends State<StatusRider> {
     screenHeight = MediaQuery.of(context).size.height;
 
     return PopScope(
+      onPopInvoked: (didPop) async {
+        stopRealtimeGetStatus();
+        stopLocationUpdatesStatus();
+        return Future.value();
+      },
       canPop: false,
       child: Scaffold(
         body: Stack(
@@ -193,8 +201,8 @@ class _StatuspageState extends State<StatusRider> {
                               )),
                           Row(
                             children: [
-                              distance != null
-                                  ? Text(distance.toString(),
+                              minDistance != null
+                                  ? Text('${minDistance.toStringAsFixed(0)} m',
                                       style: const TextStyle(
                                         fontSize: 20,
                                         fontWeight: FontWeight.bold,
@@ -326,7 +334,11 @@ class _StatuspageState extends State<StatusRider> {
                         width: screenWidth * 0.5,
                         height: screenHeight * 0.06,
                         child: FilledButton(
-                          onPressed: image != null ? addPicturePerStatus : null,
+                          onPressed: image != null &&
+                                  _activeButtonIndex ==
+                                      int.parse(orders[0].status) + 1
+                              ? addPicturePerStatus
+                              : null,
                           style: FilledButton.styleFrom(
                               backgroundColor: Colors.orange,
                               shape: RoundedRectangleBorder(
@@ -477,7 +489,8 @@ class _StatuspageState extends State<StatusRider> {
     orders = [OrderRes.fromFirestore(result.data()!, result.id)];
 
     log('orders ${orders[0].status}');
-    if (int.parse(orders[0].status) > 3) {
+    if (int.parse(orders[0].status) > 3 ||
+        orders[0].riderRid != box.read('uid')) {
       Get.to(() =>
           NavbottompageRider(selectedPages: 0, phoneNumber: box.read('phone')));
     }
@@ -603,13 +616,21 @@ class _StatuspageState extends State<StatusRider> {
         log("Failed to load directions for origin: $rider - ${response.reasonPhrase}");
       }
     }
-    List<String> distanceParts = distance.split(' ');
-    if (distance.toLowerCase().contains('km')) {
-      minDistance = (double.parse(distanceParts[0]) * 1000);
-    } else {
-      minDistance = double.parse(distanceParts[0]); // Already in meters
+    // List<String> distanceParts = distance.split(' ');
+    // if (distance.toLowerCase().contains('km')) {
+    //   minDistance = (double.parse(distanceParts[0]) * 1000);
+    // } else {
+    //   minDistance = double.parse(distanceParts[0]); // Already in meters
+    // }
+    // log(minDistance.toString());
+    if (orders[0].status == '2') {
+      minDistance = Geolocator.distanceBetween(riders[0].latitude,
+          riders[0].longitude, pickup.latitude, pickup.longitude);
+    } else if (orders[0].status == '3') {
+      minDistance = Geolocator.distanceBetween(riders[0].latitude,
+          riders[0].longitude, destination.latitude, destination.longitude);
     }
-    log(minDistance.toString());
+    // log(minDistance.toString());
     _fitAllMarkers();
   }
 
@@ -705,13 +726,12 @@ class _StatuspageState extends State<StatusRider> {
     return BitmapDescriptor.fromBytes(bytes);
   }
 
-  void startLocationUpdates() {
+  void startLocationUpdateStatus() {
     LocationSettings locationSettings = const LocationSettings(
       accuracy: LocationAccuracy.high,
-      distanceFilter: 10,
+      distanceFilter: 5,
     );
-
-    locationSubscription =
+    context.read<AppData>().locationSubscriptionStatus =
         Geolocator.getPositionStream(locationSettings: locationSettings)
             .listen((Position position) async {
       LatLng currentLocation = LatLng(position.latitude, position.longitude);
@@ -721,22 +741,59 @@ class _StatuspageState extends State<StatusRider> {
       });
       log('Current Location: $currentLocation');
     });
-    if (mounted) {
-      setState(() {});
+  }
+
+  void stopLocationUpdatesStatus() {
+    try {
+      context.read<AppData>().locationSubscriptionStatus.cancel().then((value) {
+        log('Location Cancle');
+      });
+    } catch (e) {
+      log('Location is not runing...');
     }
   }
 
-  void startRealtimeGet() {
+  void stopLocationUpdatesHome() {
+    try {
+      context.read<AppData>().locationSubscriptionHome.cancel().then((value) {
+        log('Location Cancle');
+      });
+    } catch (e) {
+      log('Location is not runing...');
+    }
+  }
+
+  void startRealtimeGetStatus() {
     setState(() {
       _markers.clear();
       _polylines.clear();
     });
     final docRef = db.collection("order").doc(widget.docId);
-    docRef.snapshots().listen((event) {
+    context.read<AppData>().listenerStatus = docRef.snapshots().listen((event) {
       setState(() {
         readData();
       });
     }, onError: (error) => log("Listen failed"));
+  }
+
+  void stopRealtimeGetStatus() {
+    try {
+      context.read<AppData>().listenerStatus.cancel().then((value) {
+        log('Listener Cancle');
+      });
+    } catch (e) {
+      log('Listener is not runing...');
+    }
+  }
+
+  void stopRealtimeGetHome() {
+    try {
+      context.read<AppData>().listenerHome.cancel().then((value) {
+        log('Listener Cancle');
+      });
+    } catch (e) {
+      log('Listener is not runing...');
+    }
   }
 
   Widget _buildStatusStep(String label, IconData icon, bool isActive) {
@@ -776,6 +833,7 @@ class _StatuspageState extends State<StatusRider> {
 
   Widget _buildStatusButton(int index, String text, bool disable) {
     bool isActive = _activeButtonIndex == index;
+    log(_activeButtonIndex.toString());
     return ElevatedButton(
       onPressed: !disable
           ? null
@@ -816,26 +874,89 @@ class _StatuspageState extends State<StatusRider> {
       if (orders[0].picture != '' && status == 2) {
         setState(() {});
         return Image.network(
-          orders[0].picture, fit: BoxFit.contain,
+          orders[0].picture,
+          fit: BoxFit.contain,
           width: screenWidth *
               0.85, // Ensure the image doesn't overflow horizontally
           height: screenHeight * 0.3,
+          loadingBuilder: (BuildContext context, Widget child,
+              ImageChunkEvent? loadingProgress) {
+            if (loadingProgress == null) {
+              return child; // Return the image once it's loaded
+            }
+            return Center(
+              child: CircularProgressIndicator(
+                value: loadingProgress.expectedTotalBytes != null
+                    ? loadingProgress.cumulativeBytesLoaded /
+                        (loadingProgress.expectedTotalBytes ?? 1)
+                    : null, // Show the progress if available
+              ),
+            );
+          },
+          errorBuilder:
+              (BuildContext context, Object error, StackTrace? stackTrace) {
+            return const Center(
+                child: Text(
+                    'Error loading image')); // Show an error message if the image fails to load
+          },
         );
       } else if (orders[0].picture_2 != '' && status == 3) {
         setState(() {});
         return Image.network(
-          orders[0].picture_2, fit: BoxFit.contain,
+          orders[0].picture_2,
+          fit: BoxFit.contain,
           width: screenWidth *
               0.85, // Ensure the image doesn't overflow horizontally
           height: screenHeight * 0.3,
+          loadingBuilder: (BuildContext context, Widget child,
+              ImageChunkEvent? loadingProgress) {
+            if (loadingProgress == null) {
+              return child; // Return the image once it's loaded
+            }
+            return Center(
+              child: CircularProgressIndicator(
+                value: loadingProgress.expectedTotalBytes != null
+                    ? loadingProgress.cumulativeBytesLoaded /
+                        (loadingProgress.expectedTotalBytes ?? 1)
+                    : null, // Show the progress if available
+              ),
+            );
+          },
+          errorBuilder:
+              (BuildContext context, Object error, StackTrace? stackTrace) {
+            return const Center(
+                child: Text(
+                    'Error loading image')); // Show an error message if the image fails to load
+          },
         );
       } else if (orders[0].picture_3 != '' && status == 4) {
         setState(() {});
         return Image.network(
-          orders[0].picture_3, fit: BoxFit.contain,
+          orders[0].picture_3,
+          fit: BoxFit.contain,
           width: screenWidth *
               0.85, // Ensure the image doesn't overflow horizontally
           height: screenHeight * 0.3,
+          loadingBuilder: (BuildContext context, Widget child,
+              ImageChunkEvent? loadingProgress) {
+            if (loadingProgress == null) {
+              return child; // Return the image once it's loaded
+            }
+            return Center(
+              child: CircularProgressIndicator(
+                value: loadingProgress.expectedTotalBytes != null
+                    ? loadingProgress.cumulativeBytesLoaded /
+                        (loadingProgress.expectedTotalBytes ?? 1)
+                    : null, // Show the progress if available
+              ),
+            );
+          },
+          errorBuilder:
+              (BuildContext context, Object error, StackTrace? stackTrace) {
+            return const Center(
+                child: Text(
+                    'Error loading image')); // Show an error message if the image fails to load
+          },
         );
       } else if (image != null) {
         return Image.file(
@@ -1008,15 +1129,15 @@ class _StatuspageState extends State<StatusRider> {
   }
 
   Future<void> confirmImageStatus() async {
-    setState(() {
-      showLoadingDialog(context, true);
-    });
+    bool last = false;
+    pictureUrl = '';
     await imageUpload();
     var data;
     if (_activeButtonIndex == 3) {
       data = {'picture_2': pictureUrl, 'status': 3};
     } else if (_activeButtonIndex == 4) {
       data = {'picture_3': pictureUrl, 'status': 4, 'endAt': DateTime.now()};
+      last = true;
     }
 
     await db.collection('order').doc(widget.docId).update(data);
@@ -1024,14 +1145,23 @@ class _StatuspageState extends State<StatusRider> {
     image = null;
 
     if (_activeButtonIndex == 3) {
-      _activeButtonIndex == 4;
+      _activeButtonIndex = 4;
     }
-
-    await Future.delayed(const Duration(seconds: 4));
+    log('test');
+    log("active$_activeButtonIndex");
+    if (last) {
+      Get.to(() =>
+          NavbottompageRider(selectedPages: 0, phoneNumber: box.read('phone')));
+    } else {
+      // setState(() {
+      //   showLoadingDialog(context, false);
+      // });
+    }
   }
 
   void showLoadingDialog(BuildContext context, bool isLoading) {
     if (!isLoading) return;
+    log(isLoading.toString());
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -1067,19 +1197,29 @@ class _StatuspageState extends State<StatusRider> {
   }
 
   Future<void> imageUpload() async {
-    log(image!.path);
-    String fileName = DateTime.now().millisecondsSinceEpoch.toString();
-    Reference ref = FirebaseStorage.instance.ref();
-    Reference refUserProfile = ref.child('order');
-    Reference imageToUpload = refUserProfile.child(fileName);
+    if (image != null) {
+      showLoadingDialog(context, true);
+      log('Image path: ${image!.path}');
+      String fileName = DateTime.now().millisecondsSinceEpoch.toString();
+      Reference ref = FirebaseStorage.instance.ref();
+      Reference refUserProfile = ref.child('order');
+      Reference imageToUpload = refUserProfile.child(fileName);
 
-    try {
-      await imageToUpload.putFile(File(image!.path));
-      log('test');
-      pictureUrl = await imageToUpload.getDownloadURL();
-      log(pictureUrl);
-    } catch (e) {
-      log('Error!');
+      try {
+        // Upload the file
+        await imageToUpload.putFile(File(image!.path));
+        log('Upload successful');
+
+        // Get the download URL
+        pictureUrl = await imageToUpload.getDownloadURL();
+        log('Download URL: $pictureUrl');
+        Get.back();
+        Get.back();
+      } catch (e) {
+        log('Error during upload: $e');
+      }
+    } else {
+      log('No image selected for upload');
     }
   }
 }

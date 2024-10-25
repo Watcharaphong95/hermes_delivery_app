@@ -8,6 +8,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
 import 'package:hermes_app/config/config.dart';
 import 'package:hermes_app/models/rider_register_req.dart';
+import 'package:hermes_app/pages_user/login.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:http/http.dart' as http;
 
@@ -34,6 +35,8 @@ class _RegisterRiderpageState extends State<RegisterRiderpage> {
   TextEditingController passwordCtl = TextEditingController();
   TextEditingController confirmpasswordCtl = TextEditingController();
   TextEditingController licenseplateCtl = TextEditingController();
+  final RxBool isPasswordVisible = true.obs;
+  final RxBool isPasswordVisible1 = true.obs;
 
   @override
   Widget build(BuildContext context) {
@@ -123,6 +126,7 @@ class _RegisterRiderpageState extends State<RegisterRiderpage> {
                       ),
                       child: TextField(
                         controller: phoneCtl,
+                        keyboardType: TextInputType.number,
                         decoration: const InputDecoration(
                           hintText: 'หมายเลขโทรศัพท์',
                           hintStyle: TextStyle(
@@ -170,15 +174,25 @@ class _RegisterRiderpageState extends State<RegisterRiderpage> {
                         borderRadius: BorderRadius.circular(30),
                       ),
                       child: TextField(
+                        obscureText: isPasswordVisible.value,
                         controller: passwordCtl,
-                        decoration: const InputDecoration(
-                          hintText: 'รหัสผ่าน',
-                          hintStyle: TextStyle(
-                              fontSize: 14, color: Color.fromARGB(97, 0, 0, 0)),
-                          border: InputBorder.none,
-                          contentPadding: EdgeInsets.symmetric(
-                              vertical: 15, horizontal: 35),
-                        ),
+                        decoration: InputDecoration(
+                            hintText: 'รหัสผ่าน',
+                            hintStyle: const TextStyle(
+                                fontSize: 14,
+                                color: Color.fromARGB(97, 0, 0, 0)),
+                            border: InputBorder.none,
+                            contentPadding: const EdgeInsets.symmetric(
+                                vertical: 15, horizontal: 35),
+                            suffixIcon: IconButton(
+                                onPressed: () {
+                                  isPasswordVisible.value =
+                                      !isPasswordVisible.value;
+                                  setState(() {});
+                                },
+                                icon: Icon(isPasswordVisible.value
+                                    ? Icons.visibility_off
+                                    : Icons.visibility))),
                       ),
                     ),
                   ),
@@ -194,15 +208,25 @@ class _RegisterRiderpageState extends State<RegisterRiderpage> {
                         borderRadius: BorderRadius.circular(30),
                       ),
                       child: TextField(
+                        obscureText: isPasswordVisible1.value,
                         controller: confirmpasswordCtl,
-                        decoration: const InputDecoration(
-                          hintText: 'ยืนยันรหัสผ่าน',
-                          hintStyle: TextStyle(
-                              fontSize: 14, color: Color.fromARGB(97, 0, 0, 0)),
-                          border: InputBorder.none,
-                          contentPadding: EdgeInsets.symmetric(
-                              vertical: 15, horizontal: 35),
-                        ),
+                        decoration: InputDecoration(
+                            hintText: 'ยืนยันรหัสผ่าน',
+                            hintStyle: const TextStyle(
+                                fontSize: 14,
+                                color: Color.fromARGB(97, 0, 0, 0)),
+                            border: InputBorder.none,
+                            contentPadding: const EdgeInsets.symmetric(
+                                vertical: 15, horizontal: 35),
+                            suffixIcon: IconButton(
+                                onPressed: () {
+                                  isPasswordVisible1.value =
+                                      !isPasswordVisible1.value;
+                                  setState(() {});
+                                },
+                                icon: Icon(isPasswordVisible1.value
+                                    ? Icons.visibility_off
+                                    : Icons.visibility))),
                       ),
                     ),
                   ),
@@ -267,9 +291,54 @@ class _RegisterRiderpageState extends State<RegisterRiderpage> {
   }
 
   Future<void> createAccount() async {
-    log(image?.path ?? 'No image selected');
-    if (image == null) return;
+    if (image == null) {
+      showErrorDialog('กรุณาอัพโหลดรูปภาพ'); // "Please upload a picture"
+      return;
+    }
 
+    if (phoneCtl.text.isEmpty ||
+        RegExp(r'^\s+$').hasMatch(phoneCtl.text) ||
+        !RegExp(r'^\d+$').hasMatch(phoneCtl.text)) {
+      showErrorDialog(
+          'กรุณากรอกหมายเลขโทรศัพท์'); // "Please enter your phone number"
+      return;
+    }
+
+    if (nameCtl.text.isEmpty || RegExp(r'^\s+$').hasMatch(nameCtl.text)) {
+      showErrorDialog('กรุณากรอกชื่อ'); // "Please enter your name"
+      return;
+    }
+
+    if (passwordCtl.text.isEmpty ||
+        RegExp(r'^\s+$').hasMatch(passwordCtl.text)) {
+      showErrorDialog('กรุณากรอกรหัสผ่าน'); // "Please enter your password"
+      return;
+    }
+
+    if (confirmpasswordCtl.text.isEmpty ||
+        RegExp(r'^\s+$').hasMatch(passwordCtl.text)) {
+      showErrorDialog(
+          'กรุณากรอกรหัสผ่านอีกครั้ง'); // "Please confirm your password"
+      return;
+    }
+
+    if (licenseplateCtl.text.isEmpty ||
+        RegExp(r'^\s+$').hasMatch(licenseplateCtl.text)) {
+      showErrorDialog('กรุณากรอกป้ายทะเบียน'); // "Please enter your address"
+      return;
+    }
+
+    if (passwordCtl.text != confirmpasswordCtl.text) {
+      showErrorDialog('รหัสผ่านไม่ตรงกัน'); // "Passwords do not match"
+      return;
+    }
+
+    if (phoneCtl.text.length != 10) {
+      showErrorDialog(
+          'หมายเลขโทรศัพท์ต้องมี 10 หลัก'); // "Phone number must be 10 digits"
+      return;
+    }
+    showLoadingDialog(context, true);
     String fileName = DateTime.now().millisecondsSinceEpoch.toString();
     Reference ref = FirebaseStorage.instance.ref();
     Reference refUserProfile = ref.child('profile');
@@ -313,6 +382,162 @@ class _RegisterRiderpageState extends State<RegisterRiderpage> {
             headers: {"Content-Type": "application/json; charset=utf-8"},
             body: json.encode(userRegisterReq.toJson()),
           );
+          if (response.statusCode == 201) {
+            showDialog(
+              barrierDismissible: false,
+              context: context,
+              builder: (BuildContext context) {
+                return Dialog(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Container(
+                    width: MediaQuery.of(context).size.width * 0.8,
+                    padding: const EdgeInsets.all(0),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: <Widget>[
+                        const Padding(
+                          padding: EdgeInsets.fromLTRB(0, 25, 10, 10),
+                          child: Center(
+                            child: Text(
+                              "สมัครสมาชิกสำเร็จ!", // "Success"
+                              style: TextStyle(
+                                fontSize: 23,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const Divider(),
+                        const SizedBox(height: 10),
+                        const Padding(
+                          padding: EdgeInsets.all(10),
+                          child: Text(
+                            "ยินดีต้อนรับสู่ระบบขนส่ง HERMES ครับ", // "Item sent successfully"
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 15,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        // const Divider(),
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(0, 5, 0, 10),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                            children: <Widget>[
+                              SizedBox(
+                                width: screenWidth * 0.6,
+                                height: screenHeight * 0.06,
+                                child: FilledButton(
+                                  onPressed: () {
+                                    Get.to(() => const LoginPage());
+                                  },
+                                  style: ButtonStyle(
+                                    backgroundColor: MaterialStateProperty.all(
+                                        const Color(0xFFFF7723)), // สีพื้นหลัง
+                                  ),
+                                  child: const Text(
+                                    'ตกลง',
+                                    style: TextStyle(
+                                      fontSize: 20,
+                                      color: Colors
+                                          .white, // เปลี่ยนสีข้อความให้เหมาะสมกับพื้นหลัง
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            );
+          } else {
+            showDialog(
+              barrierDismissible: false,
+              context: context,
+              builder: (BuildContext context) {
+                return Dialog(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Container(
+                    width: MediaQuery.of(context).size.width * 0.8,
+                    padding: const EdgeInsets.all(0),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: <Widget>[
+                        const Padding(
+                          padding: EdgeInsets.fromLTRB(0, 25, 10, 10),
+                          child: Center(
+                            child: Text(
+                              "สมัครสมาชิกไม่สำเร็จ", // "Success"
+                              style: TextStyle(
+                                fontSize: 23,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const Divider(),
+                        const SizedBox(height: 10),
+                        const Padding(
+                          padding: EdgeInsets.all(10),
+                          child: Text(
+                            "เบอร์นี้ถูกใช้แล้ว", // "Item sent successfully"
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 15,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        // const Divider(),
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(0, 5, 0, 10),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                            children: <Widget>[
+                              SizedBox(
+                                width: screenWidth * 0.6,
+                                height: screenHeight * 0.06,
+                                child: FilledButton(
+                                  onPressed: () {
+                                    Get.back();
+                                    Get.back();
+                                  },
+                                  style: ButtonStyle(
+                                    backgroundColor: MaterialStateProperty.all(
+                                        const Color(0xFFFF7723)), // สีพื้นหลัง
+                                  ),
+                                  child: const Text(
+                                    'ตกลง',
+                                    style: TextStyle(
+                                      fontSize: 20,
+                                      color: Colors
+                                          .white, // เปลี่ยนสีข้อความให้เหมาะสมกับพื้นหลัง
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            );
+          }
 
           log('Registration response: ${response.statusCode} ${response.body}');
           if (response.statusCode == 200) {
@@ -415,6 +640,118 @@ class _RegisterRiderpageState extends State<RegisterRiderpage> {
                   ),
                 ),
                 const SizedBox(height: 10),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void showLoadingDialog(BuildContext context, bool isLoading) {
+    if (!isLoading) return;
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return const Center(
+          child: AlertDialog(
+            backgroundColor: Colors.transparent,
+            content: Padding(
+              padding: EdgeInsets.symmetric(vertical: 20),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  SizedBox(
+                    height: 100,
+                    width: 100,
+                    child: CircularProgressIndicator(
+                      color: Colors.orange,
+                      strokeWidth: 10,
+                    ),
+                  ),
+                  SizedBox(height: 20), // Space between the indicator and text
+                  Text(
+                    "กำลังโหลด...",
+                    style: TextStyle(color: Colors.white),
+                  ), // Optional loading text
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void showErrorDialog(String message) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Container(
+            width: MediaQuery.of(context).size.width * 0.8,
+            padding: const EdgeInsets.all(0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                const Padding(
+                  padding: EdgeInsets.fromLTRB(0, 25, 10, 10),
+                  child: Center(
+                    child: Text(
+                      "เกิดข้อผิดพลาด!", // "Error"
+                      style: TextStyle(
+                        fontSize: 23,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+                const Divider(),
+                const SizedBox(height: 10),
+                Padding(
+                  padding: const EdgeInsets.all(10),
+                  child: Text(
+                    message, // แสดงข้อความข้อผิดพลาด
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontSize: 15,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(0, 5, 0, 10),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: <Widget>[
+                      SizedBox(
+                        width: MediaQuery.of(context).size.width * 0.6,
+                        height: MediaQuery.of(context).size.height * 0.06,
+                        child: FilledButton(
+                          onPressed: () {
+                            Navigator.pop(context);
+                          },
+                          style: ButtonStyle(
+                            backgroundColor: MaterialStateProperty.all(
+                                const Color(0xFFFF7723)), // สีพื้นหลัง
+                          ),
+                          child: const Text(
+                            'ตกลง',
+                            style: TextStyle(
+                              fontSize: 20,
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ],
             ),
           ),
